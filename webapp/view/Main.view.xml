@@ -1,0 +1,86 @@
+<mvc:View controllerName="pho.com.serviceoverview.controller.Main"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    <Page id="page" title="{i18n>title}" class="sapUiContentPadding sapUiResponsivePadding--header sapUiResponsivePadding--content">
+        <content>
+            <Table id="idServiceTable" inset="false" items="{
+                path: '/YY1_ServiceConfirmation',
+                sorter: {
+                    path: 'ServiceOrder'
+                        }
+                    }">
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <content>
+                            <!-- <Title text="{i18n>serviceConfirmations}" level="H2"/> -->
+                        </content>
+                    </OverflowToolbar>
+                </headerToolbar>
+                <infoToolbar>
+                   
+                   
+                </infoToolbar>
+                <columns>
+                    <Column width="12em">
+                        <Text text="{i18n>serviceOrder}" />
+                    </Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="{i18n>serviceOrderDescription}" />
+                    </Column>
+                    <Column  minScreenWidth="Desktop" demandPopin="true">
+                        <Text text="{i18n>requestedServiceStartDateTime}" />
+                    </Column>
+                    <Column minScreenWidth="Desktop" demandPopin="true" >
+                        <Text text="{i18n>requestedServiceEndDateTime}" />
+                    </Column>
+                    <Column minScreenWidth="Tablet"  demandPopin="true">
+                        <Text text="{i18n>serviceDocumentStatus}" />
+                    </Column>
+                    <Column minScreenWidth="Tablet" demandPopin="true">
+                        <Text text="{i18n>serviceDocumentPriority}" />
+                    </Column>
+                    <Column >
+                        <Text text="{i18n>businessPartnerName}" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem vAlign="Middle" type="Active" press="onServiceOrderPress">
+                        <cells>
+                            <Text text="{ServiceOrder}" />
+                            <Text text="{ServiceOrderDescription}" />
+                            <Text text="{ 
+                                path: 'RequestedServiceStartDateTime',
+                                type: 'sap.ui.model.type.DateTime',
+                                formatOptions: { pattern: 'dd.MM.yyyy' }
+                                }" />
+                            <Text  text="{ 
+                                path: 'RequestedServiceEndDateTime',
+                                type: 'sap.ui.model.type.DateTime',
+                                formatOptions: { pattern: 'dd.MM.yyyy' }
+                                }" class="sapUiSmallMarginEn" />
+                            <HBox alignItems="Center">
+                            
+                                <core:Icon src="{= ${ServiceOrderStatusName} === 'Completed' ? 'sap-icon://message-success' :
+                                         ${ServiceOrderStatusName} === 'In Process' ? 'sap-icon://busy' :
+                                         ${ServiceOrderStatusName} === 'Released' ? 'sap-icon://customer-financial-fact-sheet' :
+                                         ${ServiceOrderStatusName} === 'Open' ? 'sap-icon://open-folder' :
+                                         'sap-icon://alert' }" size="1rem" color="{= ${ServiceOrderStatusName} === 'Completed' ? '#107e3e' : 
+                                            ${ServiceOrderStatusName} === 'Released' ? '#107e3e' : 
+                                            ${ServiceOrderStatusName} === 'In Process' ? '#107e3e' : 
+                                            ${ServiceOrderStatusName} === 'Open' ? '#107e3e' : 
+                                            '#666666' }" class="sapUiSmallMarginEnd"  />
+                                <Text text="{ServiceOrderStatusName}"  />
+                            </HBox>
+                            <Text text="{
+                                    path: 'ServiceDocumentPriority',
+                                    formatter: '.formatter.priorityText'
+                                }"/>
+                            <Text text="{BusinessPartnerName}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

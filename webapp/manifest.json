@@ -1,0 +1,138 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "pho.com.serviceoverview",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.17.0",
+      "toolsId": "0f083c8d-ac19-4ddb-acdc-e21df586bf04"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/sap/opu/odata/sap/YY1_SERVICECONFIRMATION_CDS/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/mainService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      },
+      "confirmationService": {
+        "uri": "/sap/opu/odata/sap/API_SERVICE_CONFIRMATION_SRV/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/confirmationService/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": false,
+    "dependencies": {
+      "minUI5Version": "1.130.8",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "pho.com.serviceoverview.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {}
+      },
+      "confirmation": {
+      "dataSource": "confirmationService",
+      "preload": true,
+      "settings": {}
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "path": "pho.com.serviceoverview.view",
+        "async": true,
+        "viewPath": "pho.com.serviceoverview.view"
+      },
+      "routes": [
+        {
+          "name": "RouteMain",
+          "pattern": ":?query:",
+          "target": 
+          ["TargetMain"]
+        },
+        {
+          "name": "Time",
+          "pattern": "Time/{serviceOrder}",
+          "target": "Time"
+        }
+      ],
+      "targets": {
+        "TargetMain": {
+          "id": "Main",
+          "name": "Main",
+          "viewLevel": 1
+        },
+       
+       "Time": {
+        "viewName": "Time",
+         "viewLevel": 2
+       }
+      }
+    },
+    "rootView": {
+      "viewName": "pho.com.serviceoverview.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  }
+}

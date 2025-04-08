@@ -1,0 +1,116 @@
+<mvc:View controllerName="pho.com.serviceoverview.controller.Time"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m" displayBlock="true">
+    <Page title="{i18n>serviceConfirmation}" class="sapUiContentPadding sapUiResponsivePadding--header sapUiResponsivePadding--content">
+        <content>
+            <!-- ObjectHeader -->
+            <ObjectHeader title= "{filteredConfirmation>/to_Item/0/ReferenceServiceOrder}" number="{filteredConfirmation>/results/0/ServiceConfirmation}" class="sapUiResponsivePadding--header">
+                <attributes>
+
+                    <ObjectAttribute title="{i18n>startTime}" text="{ 
+                        path: 'filteredConfirmation>/additionalData/RequestedServiceStartDateTime', 
+                        type: 'sap.ui.model.type.DateTime', 
+                        formatOptions: { pattern: 'dd.MM.yyyy ' } 
+                    }" />
+                    <ObjectAttribute title="{i18n>endTime}" text="{ 
+                        path: 'filteredConfirmation>/additionalData/PostingDate', 
+                        type: 'sap.ui.model.type.DateTime', 
+                        formatOptions: { pattern: 'dd.MM.yyyy ' } 
+                    }" />
+                    <ObjectAttribute title="{i18n>ContactPerson}" text="{filteredConfirmation>/additionalData/BusinessPartnerFullName_1}" />
+                    <ObjectAttribute title="{i18n>Sold-ToParty}" text="{filteredConfirmation>/additionalData/BusinessPartnerFullName}" />
+                    <ObjectAttribute title="{i18n>SalesOrganization}" text="{filteredConfirmation>/additionalData/SalesOrganization}" />
+                    <ObjectAttribute title="{i18n>employee}" text="{filteredConfirmation>/to_Item/0/ExecutingServiceEmployee}" />
+                </attributes>
+            </ObjectHeader>
+
+            <!-- Tabelle für Items -->
+
+            <Table id="itemTable" items="{filteredConfirmation>/to_Item}" visible="{viewModel>/tableVisible}">
+                <columns>
+                    <Column>
+                        <Text text="{i18n>ServiceConfirmation}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>item}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>product}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>description}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>quantity}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>unit}" />
+                    </Column>
+                    <Column>
+                        <Text text="{i18n>startTime}" />
+                    </Column>
+
+                    <Column>
+                        <Text text="{i18n>endTime}" />
+                    </Column> 
+                    <Column>
+                        <Text text="{i18n>duration}" />
+                    </Column>
+                    
+                </columns>
+                <items>
+                    <ColumnListItem>
+                        <cells>
+                            <Text text="{filteredConfirmation>ServiceConfirmation}" />
+                            <Text text="{filteredConfirmation>ServiceConfirmationItem}" />
+                            <Text text="{filteredConfirmation>Product}" />
+                            <Text text="{filteredConfirmation>ServiceConfItemDescription}" />
+
+                            <Input value="{filteredConfirmation>Quantity}" type="Number" editable="false"/>
+                            <Text text="{filteredConfirmation>QuantityUnit}" />
+
+                            <!-- <Text text="{ 
+                                path: 'filteredConfirmation>ActualServiceStartDateTime',
+                                type: 'sap.ui.model.type.DateTime',
+                                formatOptions: { pattern: 'dd.MM.yyyy' }
+                            }" />
+                            <Text text="{ 
+                                path: 'filteredConfirmation>ActualServiceStartDateTime',
+                                type: 'sap.ui.model.type.DateTime',
+                                formatOptions: { pattern: 'dd.MM.yyyy' }
+                            }" /> -->
+
+                            <DateTimePicker value="{ 
+                                    path: 'ActualServiceEndDateTime', 
+                                    type: 'sap.ui.model.type.DateTime', 
+                                    formatOptions: { pattern: 'dd.MM.yyyy HH:mm' } 
+                                        }"  visible="{ 
+                                    path: 'filteredConfirmation>ServiceConfirmationItem', 
+                                    formatter: '.formatter.visibleIfService' 
+                                            }"
+                                change="onStartTimeChange" /> 
+
+
+
+                            <DateTimePicker value="{ 
+                                    path: 'ActualServiceEndDateTime', 
+                                    type: 'sap.ui.model.type.DateTime', 
+                                    formatOptions: { pattern: 'dd.MM.yyyy HH:mm' } 
+                                }" visible="{ 
+                                    path: 'filteredConfirmation>ServiceConfirmationItem', 
+                                    formatter: '.formatter.visibleIfService' 
+                                }"
+                                change="onEndTimeChange" />  
+
+
+                             <!-- <Input value="{ActualServiceDuration}" type="Number" change="onDurationChange" /> -->
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+            <HBox justifyContent="End" class="sapUiSmallMarginTop">
+                <Button text="{i18n>save}" press="onSave" type="Emphasized" visible="{viewModel>/tableVisible}"/>
+            </HBox>
+        </content>
+    </Page>
+</mvc:View>
