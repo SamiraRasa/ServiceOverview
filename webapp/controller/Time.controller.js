@@ -24,8 +24,15 @@ sap.ui.define([
             this.getView().setModel(oFilteredModel, "filteredConfirmation");
 
             // View-Modell für zusätzliche Steuerung
-            const oViewModel = new JSONModel({
-                tableVisible: false
+            // const oViewModel = new JSONModel({
+            //     tableVisible: false
+            const oServiceOrderModel = new JSONModel({
+                to_Item: []
+            });
+            this.getView().setModel(oServiceOrderModel, "serviceOrder");
+            let oViewModel = new JSONModel({
+                selectedTab: "confirmations", // Default to confirmations tab
+                tableVisible: true
             });
             this.getView().setModel(oViewModel, "viewModel");
         },
@@ -35,10 +42,51 @@ sap.ui.define([
 
             if (sOrderId) {
                 this._loadServiceConfirmationHeader(sOrderId); 
+                this._sOrderId = sOrderId;
             } else {
                 MessageToast.show("Keine gültige ServiceOrder gefunden!");
                 this.getView().getModel("viewModel").setProperty("/tableVisible", false);
             }
+        },
+
+        onTabChange: function (oEvent) {
+            var sSelectedKey = oEvent.getParameter("item").getKey();
+            this.getView().getModel("viewModel").setProperty("/selectedTab", sSelectedKey);
+            // Prüfen ob sOrderId verfügbar ist
+            if (sSelectedKey === "orders" && this._sOrderId) {
+                this._loadServiceOrderItems(this._sOrderId);
+            } else if (sSelectedKey === "orders") {
+                MessageToast.show("Keine ServiceOrder-ID verfügbar");
+            }
+        },
+        _loadServiceOrderItems: function (sOrderId) {
+            console.log("Loading service order items for:", sOrderId);
+            
+            // ODataModel aus der manifest.json
+            const oODataModel = this.getOwnerComponent().getModel("serviceOrder");
+            // JSONModel für die lokale Speicherung
+            const oJSONModel = this.getView().getModel("serviceOrder");
+            
+            const sPath = "/A_ServiceOrderItem";
+            const oFilter = new Filter("ServiceOrder", FilterOperator.EQ, sOrderId);
+        
+            oODataModel.read(sPath, {
+                filters: [oFilter],
+                success: function (oData) {
+                    console.log("Received data:", oData);
+                    const filteredItems = oData.results.filter(item => item.ServiceOrderItem === "10");
+                    oJSONModel.setProperty("/to_Item", filteredItems);
+                    console.log("JSONModel data:", oJSONModel.getData());
+                    oJSONModel.refresh(true); // UI aktualisieren
+                    MessageToast.show("Service order items loaded successfully!");
+                }.bind(this),
+                error: function (oError) {
+                    console.error("Error details:", oError);
+                    MessageToast.show("Error fetching service order items: " + oError.message);
+                    oJSONModel.setProperty("/to_Item", []);
+                    oJSONModel.refresh(true);
+                }.bind(this)
+            });
         },
         
         _loadServiceConfirmationHeader: function (sOrderId) {
@@ -87,9 +135,12 @@ sap.ui.define([
                                 item.ActualServiceEndDateTime = new Date().toISOString(); // Aktuelles Datum als Fallback
                             }
                         });
-                        oFilteredModel.setProperty("/to_Item", oData.results);
-                        oFilteredModel.setProperty("/hasItems", true);
-                        oViewModel.setProperty("/tableVisible", true);
+                        const filteredItems = oData.results.filter(item => item.ServiceConfirmationItem === "10");
+                        oFilteredModel.setProperty("/to_Item", filteredItems);
+                        oFilteredModel.setProperty("/hasItems", filteredItems.length > 0);
+                        oViewModel.setProperty("/tableVisible", filteredItems.length > 0);
+                        const sServiceEmployee = filteredItems[0]?.ExecutingServiceEmployee || "";
+                        this.getOwnerComponent().setModel(new sap.ui.model.json.JSONModel({ serviceEmployee: sServiceEmployee }), "global");
                     } else {
                         oFilteredModel.setProperty("/to_Item", []);
                         oFilteredModel.setProperty("/hasItems", false);

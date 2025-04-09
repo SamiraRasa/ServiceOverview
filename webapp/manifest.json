@@ -33,9 +33,18 @@
           "localUri": "localService/confirmationService/metadata.xml",
           "odataVersion": "2.0"
         }
+      },
+      "serviceOrder": {
+        "uri": "/sap/opu/odata/sap/API_SERVICE_ORDER_SRV/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/serviceOrder/metadata.xml",
+          "odataVersion": "2.0"
+        }
       }
     }
-  },
+   },
   "sap.ui": {
     "technology": "UI5",
     "icons": {
@@ -81,6 +90,11 @@
       "dataSource": "confirmationService",
       "preload": true,
       "settings": {}
+      },
+      "serviceOrder": {
+        "dataSource": "serviceOrder",
+        "preload": true,
+        "settings": {}
       }
     },
     "resources": {

@@ -76,7 +76,7 @@
                                     path: 'ServiceDocumentPriority',
                                     formatter: '.formatter.priorityText'
                                 }"/>
-                            <Text text="{BusinessPartnerName}" />
+                            <Text text="{ServiceEmployee}" />
                         </cells>
                     </ColumnListItem>
                 </items>
