@@ -43,8 +43,22 @@
           "odataVersion": "2.0"
         }
       }
+    },
+    "crossNavigation": {
+      "inbounds": {
+        "ServiceConfirmation-display": {
+          "semanticObject": "ServiceConfirmation",
+          "action": "display",
+          "title": "{{ServiceConfirmation-display.flpTitle}}",
+          "subTitle": "{{ServiceConfirmation-display.flpSubtitle}}",
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          }
+        }
+      }
     }
-   },
+  },
   "sap.ui": {
     "technology": "UI5",
     "icons": {
@@ -87,9 +101,9 @@
         "settings": {}
       },
       "confirmation": {
-      "dataSource": "confirmationService",
-      "preload": true,
-      "settings": {}
+        "dataSource": "confirmationService",
+        "preload": true,
+        "settings": {}
       },
       "serviceOrder": {
         "dataSource": "serviceOrder",
@@ -120,8 +134,9 @@
         {
           "name": "RouteMain",
           "pattern": ":?query:",
-          "target": 
-          ["TargetMain"]
+          "target": [
+            "TargetMain"
+          ]
         },
         {
           "name": "Time",
@@ -135,11 +150,10 @@
           "name": "Main",
           "viewLevel": 1
         },
-       
-       "Time": {
-        "viewName": "Time",
-         "viewLevel": 2
-       }
+        "Time": {
+          "viewName": "Time",
+          "viewLevel": 2
+        }
       }
     },
     "rootView": {

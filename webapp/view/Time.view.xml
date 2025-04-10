@@ -23,7 +23,7 @@
                 </attributes>
             </ObjectHeader>
 
-            <SegmentedButton selectedKey="{viewModel>/selectedTab}" selectionChange="onTabChange">
+            <SegmentedButton selectedKey="{viewModel>/selectedTab}" selectionChange="onTabChange" class="sapUiLargePadding sapUiLargeMargin">
                 <items>
                     <SegmentedButtonItem key="orders" text="{i18n>orders}" />
                     <SegmentedButtonItem key="confirmations" text="{i18n>confirmations}" />
@@ -33,19 +33,19 @@
             <!-- Orders Table (visible when 'orders' tab is selected) -->
             <Table id="ordersTable"  items="{serviceOrder>/to_Item}" visible="{= ${viewModel>/selectedTab} === 'orders'}">
                 <columns>
-                    <Column>
+                    <Column width="2rem">
                         <Text text="{i18n>itemNumber}" />
                     </Column>
-                    <Column>
+                    <Column minScreenWidth="800px" width="6rem">
                         <Text text="{i18n>product}" />
-                    </Column>
-                    <Column>
-                        <Text text="{i18n>quantity}" />
                     </Column>
                     <Column>
                         <Text text="{i18n>description}" />
                     </Column>
-                    <Column>
+                    <Column width="125px">
+                        <Text text="{i18n>quantity}" />
+                    </Column>
+                    <Column minScreenWidth="330px" >
                         <Text text="{i18n>unit}" />
                     </Column>
                     <Column>
@@ -57,8 +57,17 @@
                         <cells>
                             <Text text="{serviceOrder>ServiceOrderItem}"/>
                             <Text text="{serviceOrder>Product}"/>
-                            <Text text="{serviceOrder>Quantity}"/>
                             <Text text="{serviceOrder>ServiceOrderItemDescription}"/>
+                            <StepInput 
+                                width="auto"
+                                value="{serviceOrder>Quantity}"
+                                textAlign="Center"
+                                displayValuePrecision="2"
+                                min="0.00"
+                                max="10.00"
+                                step="0.25"
+						        largerStep="1"
+                            />
                             <Text text="{serviceOrder>QuantityUnit}"/>
                             <Text text="{serviceOrder>ServiceOrderItemCategory}"/>
                         </cells>
@@ -101,10 +110,19 @@
                     </ColumnListItem>
                 </items>
             </Table>
-
-            <!-- <HBox justifyContent="End" class="sapUiSmallMarginTop">
-                <Button text="{i18n>save}" press="onSave" type="Emphasized" visible="{viewModel>/tableVisible}"/>
-            </HBox> -->
+            
+            <HBox
+                justifyContent="End"
+                class="sapUiSmallMarginTop"
+                visible="{= ${viewModel>/selectedTab} === 'orders'}"
+            >
+                <Button
+                    text="{i18n>confirm}"
+                    press=".onConfirmButtonPress"
+                    type="Emphasized"
+                visible="{= ${filteredConfirmation>/to_Item/0/} }"
+                />
+            </HBox>
         </content>
     </Page>
 </mvc:View>

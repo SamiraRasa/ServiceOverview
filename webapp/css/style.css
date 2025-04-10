@@ -1,1 +1,13 @@
 /* Enter your custom styles here */
+
+table {
+    thead {
+        div {
+            display: block !important;
+            text-align: center !important;
+        }
+    }
+    td {
+        text-align: center !important;
+    }
+}
