@@ -2,11 +2,12 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
+    "sap/m/MessageBox",
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "pho/com/serviceoverview/formatter",
     "sap/ui/core/routing/History"
-], function (Controller, JSONModel, MessageToast, Filter, FilterOperator, formatter, History) {
+], function (Controller, JSONModel, MessageToast, MessageBox, Filter, FilterOperator, formatter, History) {
     "use strict";
 
     return Controller.extend("pho.com.serviceoverview.controller.Time", {
@@ -92,14 +93,12 @@ sap.ui.define([
                     "$filter": `(ServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
                 },
                 success: (oData) => {
-                    debugger;
                     oJSONModel.setProperty("/to_Item", oData.results);
                     console.log("Received data:", oData);
                     console.log("JSONModel data:", oJSONModel.getData());
                     oJSONModel.refresh(true);
                 },
                 error: (oError) => {
-                    debugger;
                     console.error("Error details:", oError);
                     // MessageToast.show("Error fetching service order items: " + oError.message);
                     oJSONModel.setProperty("/to_Item", []);
@@ -283,18 +282,18 @@ sap.ui.define([
             const aItems = oServiceOrderModel.getProperty("/to_Item");
             const oServiceOrder = oServiceOrderModel.getProperty("/serviceOrder");
 
-            if (!oServiceOrderModel) {
-                console.error(this._getText("modelNotFound", "serviceOrder"));
-            }
+    //         if (!oServiceOrderModel) {
+     //            console.error(this._getText("modelNotFound", "serviceOrder"));
+     //        }
 
-            if (!oConfirmationModel) {
-                console.error(this._getText("modelNotFound", "confirmation"));
-            }
+      //       if (!oConfirmationModel) {
+      //           console.error(this._getText("modelNotFound", "confirmation"));
+       //      }
 
-            if (!aItems || aItems.length === 0) {
-                MessageToast.show(this._getText("noItemsToConfirm"));
-                return;
-            }
+      //       if (!aItems || aItems.length === 0) {
+       //          MessageToast.show(this._getText("noItemsToConfirm"));
+       //          return;
+       //      }
 
             // Sammle Informationen der Service Order
             var sServiceOrderId = oServiceOrder.ServiceOrder;
@@ -303,33 +302,37 @@ sap.ui.define([
             var aServiceOrderItemsToConfirm = [];
 
             // Fehlende Felder sammeln
-            let aFehlendeFelder = [];
-            if (!sServiceOrderId) aFehlendeFelder.push(this._getText("feldServiceOrder", "confirmation"));
-            if (!sServiceObjectType) aFehlendeFelder.push(this._getText("feldServiceObjectType", "confirmation"));
-            if (!sServiceOrderType) aFehlendeFelder.push(this._getText("feldServiceOrderType", "confirmation"));
-
+        //     let aFehlendeFelder = [];
+       //      if (!sServiceOrderId) aFehlendeFelder.push("confirmation");
+      //       if (!sServiceObjectType) aFehlendeFelder.push("confirmation");
+       //      if (!sServiceOrderType) aFehlendeFelder.push("confirmation");
+// 
             // Hinweis anzeigen, wenn etwas fehlt
-            if (aFehlendeFelder.length > 0) {
-                MessageToast.show(this._getText("bitteFelderAusfuellen", "confirmation", [aFehlendeFelder.join(", ")]));
-                return;
-            }
+       //      if (aFehlendeFelder.length > 0) {
+      //           MessageToast.show(this._getText("bitteFelderAusfuellen", "confirmation", [aFehlendeFelder.join(", ")]));
+      //           return;
+    //         }
 
 
             // Sammle Informationen der Service Order Items
             aItems.forEach((oOrderItem) => {
                 aServiceOrderItemsToConfirm.push({
-                    ReferenceServiceOrder: oOrderItem.ServiceOrder,
-                    ReferenceServiceOrderItem: oOrderItem.ServiceOrderItem,
-                    Quantity: String(oOrderItem.Quantity)
+                    ReferenceServiceOrder: sServiceOrderId,
+                    ReferenceServiceOrderItem: oOrderItem.ServiceOrderItem
                 });
             });
+
+            //Quantity: String(oOrderItem.Quantity)
+
+
+
 
             // Fülle das "JSON"-Objekt mit den gesammelten Informationen
             const oPayload = {
                 ServiceConfirmationType: sServiceOrderType,
                 ServiceObjectType: sServiceObjectType,
                 ReferenceServiceOrder: sServiceOrderId,
-                ServiceConfirmationIsFinal: "Y",
+                ServiceConfirmationIsFinal: "N",
                 to_Item: {
                     results: aServiceOrderItemsToConfirm
                 }
@@ -338,19 +341,14 @@ sap.ui.define([
             debugger;
 
             oConfirmationModel.create("/A_ServiceConfirmation", oPayload, {
-                success: function (oData, response) {
+                success: (oData , response) => {
                     console.log("Response:", oData, response);
-                    debugger;
-                    MessageBox.success(this._getText("confirmationSuccess"), {
-                        onClose: () => this._navBackOrHome()
-                    });
+                    MessageToast.show(this._getText("confirmationSuccess"));
+
                 },
-                error: function (oError) {
+                error: (oError) => {
                     console.error(oError);
-                    debugger;
-                    MessageBox.success(this._getText("confirmationError"), {
-                        onClose: () => this._navBackOrHome()
-                    });
+                    MessageToast.show(this._getText("confirmationSuccess"));
                 }
             });
 

@@ -1,15 +1,14 @@
-<mvc:View controllerName="pho.com.serviceoverview.controller.Main"
+<mvc:View 
+    controllerName="pho.com.serviceoverview.controller.Main"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:core="sap.ui.core">
     <Page id="page" title="{i18n>title}" class="sapUiContentPadding sapUiResponsivePadding--header sapUiResponsivePadding--content">
         <content>
-            <Table id="idServiceTable" inset="false" items="{
-                path: '/YY1_ServiceConfirmation',
-                sorter: {
-                    path: 'ServiceOrder'
-                        }
-                    }">
+            <Table 
+                id="idServiceTable" 
+                inset="false" 
+                items="{uniqueData>/}">
                 <headerToolbar>
                     <OverflowToolbar>
                         <content>
@@ -17,10 +16,6 @@
                         </content>
                     </OverflowToolbar>
                 </headerToolbar>
-                <infoToolbar>
-                   
-                   
-                </infoToolbar>
                 <columns>
                     <Column width="12em">
                         <Text text="{i18n>serviceOrder}" />
@@ -28,55 +23,58 @@
                     <Column minScreenWidth="Tablet" demandPopin="true">
                         <Text text="{i18n>serviceOrderDescription}" />
                     </Column>
-                    <Column  minScreenWidth="Desktop" demandPopin="true">
+                    <Column minScreenWidth="Desktop" demandPopin="true">
                         <Text text="{i18n>requestedServiceStartDateTime}" />
                     </Column>
-                    <Column minScreenWidth="Desktop" demandPopin="true" >
+                    <Column minScreenWidth="Desktop" demandPopin="true">
                         <Text text="{i18n>requestedServiceEndDateTime}" />
                     </Column>
-                    <Column minScreenWidth="Tablet"  demandPopin="true">
+                    <Column minScreenWidth="Tablet" demandPopin="true">
                         <Text text="{i18n>serviceDocumentStatus}" />
                     </Column>
                     <Column minScreenWidth="Tablet" demandPopin="true">
                         <Text text="{i18n>serviceDocumentPriority}" />
                     </Column>
-                    <Column >
+                    <!-- <Column>
                         <Text text="{i18n>businessPartnerName}" />
-                    </Column>
+                    </Column> -->
                 </columns>
                 <items>
                     <ColumnListItem vAlign="Middle" type="Active" press="onServiceOrderPress">
                         <cells>
-                            <Text text="{ServiceOrder}" />
-                            <Text text="{ServiceOrderDescription}" />
+                            <Text text="{uniqueData>ServiceOrder}" />
+                            <Text text="{uniqueData>ServiceOrderDescription}" />
                             <Text text="{ 
-                                path: 'RequestedServiceStartDateTime',
+                                path: 'uniqueData>RequestedServiceStartDateTime',
                                 type: 'sap.ui.model.type.DateTime',
                                 formatOptions: { pattern: 'dd.MM.yyyy' }
-                                }" />
-                            <Text  text="{ 
-                                path: 'RequestedServiceEndDateTime',
+                            }" />
+                            <Text text="{ 
+                                path: 'uniqueData>RequestedServiceEndDateTime',
                                 type: 'sap.ui.model.type.DateTime',
                                 formatOptions: { pattern: 'dd.MM.yyyy' }
-                                }" class="sapUiSmallMarginEn" />
+                            }" class="sapUiSmallMarginEn" />
                             <HBox alignItems="Center">
-                            
-                                <core:Icon src="{= ${ServiceOrderStatusName} === 'Completed' ? 'sap-icon://message-success' :
-                                         ${ServiceOrderStatusName} === 'In Process' ? 'sap-icon://busy' :
-                                         ${ServiceOrderStatusName} === 'Released' ? 'sap-icon://customer-financial-fact-sheet' :
-                                         ${ServiceOrderStatusName} === 'Open' ? 'sap-icon://open-folder' :
-                                         'sap-icon://alert' }" size="1rem" color="{= ${ServiceOrderStatusName} === 'Completed' ? '#107e3e' : 
-                                            ${ServiceOrderStatusName} === 'Released' ? '#107e3e' : 
-                                            ${ServiceOrderStatusName} === 'In Process' ? '#107e3e' : 
-                                            ${ServiceOrderStatusName} === 'Open' ? '#107e3e' : 
-                                            '#666666' }" class="sapUiSmallMarginEnd"  />
-                                <Text text="{ServiceOrderStatusName}"  />
+                                <core:Icon 
+                                    src="{= ${uniqueData>ServiceOrderStatusName} === 'Completed' ? 'sap-icon://message-success' :
+                                          ${uniqueData>ServiceOrderStatusName} === 'In Process' ? 'sap-icon://busy' :
+                                          ${uniqueData>ServiceOrderStatusName} === 'Released' ? 'sap-icon://customer-financial-fact-sheet' :
+                                          ${uniqueData>ServiceOrderStatusName} === 'Open' ? 'sap-icon://open-folder' :
+                                          'sap-icon://alert' }" 
+                                    size="1rem" 
+                                    color="{= ${uniqueData>ServiceOrderStatusName} === 'Completed' ? '#107e3e' : 
+                                           ${uniqueData>ServiceOrderStatusName} === 'Released' ? '#107e3e' : 
+                                           ${uniqueData>ServiceOrderStatusName} === 'In Process' ? '#107e3e' : 
+                                           ${uniqueData>ServiceOrderStatusName} === 'Open' ? '#107e3e' : 
+                                           '#666666' }" 
+                                    class="sapUiSmallMarginEnd" />
+                                <Text text="{uniqueData>ServiceOrderStatusName}" />
                             </HBox>
                             <Text text="{
-                                    path: 'ServiceDocumentPriority',
-                                    formatter: '.formatter.priorityText'
-                                }"/>
-                            <Text text="{ServiceEmployee}" />
+                                path: 'uniqueData>ServiceDocumentPriority',
+                                formatter: '.formatter.priorityText'
+                            }"/>
+                            <!-- <Text text="{uniqueData>BusinessPartnerName}" /> -->
                         </cells>
                     </ColumnListItem>
                 </items>
