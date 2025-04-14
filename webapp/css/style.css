@@ -11,3 +11,21 @@ table {
         text-align: center !important;
     }
 }
+
+.customTableCellContent {
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+
+@media (min-width: 479px) and (max-width: 600px) {
+    .hideStatusText {
+        display: none !important;
+    }
+}
+@media (max-width: 600px) {
+    .hideUnder600 {
+        display: none !important;
+    }
+}

@@ -3,7 +3,11 @@
   "sap.app": {
     "id": "pho.com.serviceoverview",
     "type": "application",
-    "i18n": "i18n/i18n.properties",
+    "i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": ["en", "de"],
+			"fallbackLocale": "de"
+		},
     "applicationVersion": {
       "version": "0.0.1"
     },
@@ -40,6 +44,15 @@
         "settings": {
           "annotations": [],
           "localUri": "localService/serviceOrder/metadata.xml",
+          "odataVersion": "2.0"
+        }
+      },
+      "businessPartnerService": {
+        "uri": "/sap/opu/odata/sap/API_BUSINESS_PARTNER/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "localUri": "localService/businessPartnerService/metadata.xml",
           "odataVersion": "2.0"
         }
       }
@@ -92,10 +105,12 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "pho.com.serviceoverview.i18n.i18n"
+          "bundleName": "pho.com.serviceoverview.i18n.i18n",
+          "supportedLocales": ["en", "de"],
+          "fallbackLocale": "de"
         }
       },
-      "": {
+      "YY1": {
         "dataSource": "mainService",
         "preload": true,
         "settings": {}
@@ -107,6 +122,11 @@
       },
       "serviceOrder": {
         "dataSource": "serviceOrder",
+        "preload": true,
+        "settings": {}
+      },
+      "businessPartner": {
+        "dataSource": "businessPartnerService",
         "preload": true,
         "settings": {}
       }
@@ -134,14 +154,12 @@
         {
           "name": "RouteMain",
           "pattern": ":?query:",
-          "target": [
-            "TargetMain"
-          ]
+          "target": [ "TargetMain" ]
         },
         {
           "name": "Time",
           "pattern": "Time/{serviceOrder}",
-          "target": "Time"
+          "target": [ "Time" ]
         }
       ],
       "targets": {
@@ -151,6 +169,7 @@
           "viewLevel": 1
         },
         "Time": {
+          "id": "Time",
           "viewName": "Time",
           "viewLevel": 2
         }

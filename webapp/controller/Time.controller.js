@@ -12,35 +12,288 @@ sap.ui.define([
 
     return Controller.extend("pho.com.serviceoverview.controller.Time", {
         formatter: formatter,
-
-        onInit: function () {
-            let oRouter = sap.ui.core.UIComponent.getRouterFor(this);
-            oRouter.getRoute("Time").attachPatternMatched(this._onObjectMatched, this);
-
-            const oFilteredModel = new JSONModel({
-                serviceOrder: {},
-                results: [],
-                to_Item: [],
-                additionalData: {},
-                hasItems: false
-            });
-            this.getView().setModel(oFilteredModel, "filteredConfirmation");
-
-            // View-Modell für zusätzliche Steuerung
-            // const oViewModel = new JSONModel({
-            //     tableVisible: false
-            const oServiceOrderModel = new JSONModel({
-                to_Item: []
-            });
-            this.getView().setModel(oServiceOrderModel, "serviceOrder");
-            let oViewModel = new JSONModel({
-                selectedTab: "orders", // Default to confirmations tab // orders we need as first
-                tableVisible: true
-            });
-            this.getView().setModel(oViewModel, "viewModel");
+        serviceOrderItemActions: {
+            RELEASE: "ServiceOrderItemIsReleased",
+            COMPLETE: "ServiceOrderItemIsCompleted",
+            REJECT: "ServiceOrderItemIsRejected"
         },
 
+        onInit: function () {
+            this._onResetUI();
+            sap.ui.core.UIComponent.getRouterFor(this)?.getRoute("Time").attachPatternMatched(this._onObjectMatched, this);
+        },
+
+        onTabChange: function (oEvent) {
+            var sSelectedKey = oEvent.getParameter("item").getKey();
+            this._switchTab(sSelectedKey);
+        },
+
+        /******************************************************
+         * Service Order Tab
+         ******************************************************/
+        onToggleOrderItemSelect: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("serviceOrder");
+            if (oCtx) {
+                const bSelected = oCtx.getProperty("selected");
+                oCtx.setProperty("selected", !bSelected);
+                this._updateHasSelectedConfirmationItems();
+            }
+        },
+
+        onOrderItemStepInputChange: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("serviceOrder");
+            if (oCtx && !oCtx.getProperty("selected")) {
+                oCtx.setProperty("selected", true);
+                this._updateHasSelectedConfirmationItems();
+            }
+        },
+
+        onCreateServiceConfirmationButtonPress: function (oEvent) {
+            const oServiceOrderModel = this.getView().getModel("serviceOrder");
+            const oConfirmationModel = this.getView().getModel("confirmation");
+            const aItems = oServiceOrderModel.getProperty("/to_Item")?.filter(item => item.selected);
+            const oServiceOrder = oServiceOrderModel.getProperty("/serviceOrder");
+
+            this._setBusy(true);
+
+            if (!oServiceOrderModel) {
+                console.error(this._i18n().getText("modelNotFound", "serviceOrder"));
+                this._setBusy(false);
+                return;
+            }
+
+            if (!oConfirmationModel) {
+                console.error(this._i18n().getText("modelNotFound", "confirmation"));
+                this._setBusy(false);
+                return;
+            }
+
+            if (!aItems || aItems.length === 0) {
+                MessageToast.show(this._i18n().getText("noOrderItemsSelectedToConfirm"));
+                this._setBusy(false);
+                return;
+            }
+
+            // Sammle Informationen der Service Order
+            const sServiceOrderId = oServiceOrder.ServiceOrder;
+            const sServiceObjectType = oServiceOrder.ServiceObjectType;
+            const sServiceOrderType = oServiceOrder.ServiceOrderType;
+            const aServiceOrderItemsToConfirm = [];
+            var sServiceConfirmationType = '';
+
+            // Fehlende Felder sammeln
+            const aFehlendeFelder = [];
+            if (!sServiceOrderId) aFehlendeFelder.push(this._i18n().getText("feldServiceOrder"));
+            if (!sServiceObjectType) aFehlendeFelder.push(this._i18n().getText("feldServiceObjectType"));
+            if (!sServiceOrderType) aFehlendeFelder.push(this._i18n().getText("feldServiceOrderType"));
+
+            // Hinweis anzeigen, wenn etwas fehlt
+            if (aFehlendeFelder.length > 0) {
+                MessageToast.show(this._i18n().getText("bitteFelderAusfuellen", [aFehlendeFelder.join(", ")]));
+                this._setBusy(false);
+                return;
+            }
+
+            // Mapping des Service Order Typs
+            sServiceConfirmationType = this._mapServiceConfirmationType(sServiceOrderType);
+            if (!sServiceConfirmationType) {
+                MessageToast.show(this._i18n().getText("noServiceConfirmationTypeMapping", [sServiceOrderType]));
+                this._setBusy(false);
+                return;
+            }
+
+            // Sammle Informationen der Service Order Items
+            aItems.forEach((oOrderItem) => {
+                aServiceOrderItemsToConfirm.push({
+                    ReferenceServiceOrder: oOrderItem.ServiceOrder,
+                    ReferenceServiceOrderItem: oOrderItem.ServiceOrderItem,
+                    Quantity: String(oOrderItem.Quantity)
+                });
+            });
+
+            //Quantity: String(oOrderItem.Quantity)
+            const oPayload = {
+                ServiceConfirmationType: sServiceConfirmationType,
+                ServiceObjectType: sServiceObjectType,
+                ReferenceServiceOrder: sServiceOrderId,
+                ServiceConfirmationIsFinal: "N",
+                to_Item: {
+                    results: aServiceOrderItemsToConfirm
+                }
+            };
+
+            oConfirmationModel.create("/A_ServiceConfirmation", oPayload, {
+                success: (oData, response) => {
+                    MessageBox.success(this._i18n().getText("createServiceConfirmationSuccess"), {
+                        onClose: () => {
+                            this._loadServiceConfirmationItems(this._sOrderId);
+                            this._setBusy(false);
+                            this._switchTab("confirmations");
+                        }
+                    });
+                },
+                error: (oError) => {
+                    console.error(oError);
+                    MessageBox.error(this._i18n().getText("createServiceConfirmationError"), {
+                        onClose: () => {
+                            this._setBusy(false);
+                        }
+                    });
+                }
+            });
+
+        },
+        
+        
+        
+        /******************************************************
+         * Service Order Tab
+         ******************************************************/
+        onConfirmationItemSelectChange: function (oEvent) {
+            const sSelectStatus = oEvent.getParameter("selected");
+            if (sSelectStatus) {
+                const oFilteredModel = this.getView().getModel("filteredConfirmation");
+                oFilteredModel.setProperty("/hasSelectedItems", sSelectStatus);
+                return;
+            }
+            this._updateHasSelectedConfirmationItems();
+        },
+        
+        onToggleConfirmationItemSelect: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("filteredConfirmation");
+            if (!oCtx || oCtx?.getProperty("ServiceConfItemIsCompleted") === "X") {
+                MessageToast.show(this._i18n().getText("confirmationItemAlreadyCompleted"));
+                return;
+            }
+            const bSelected = oCtx.getProperty("selected");
+            oCtx.setProperty("selected", !bSelected);
+            this._updateHasSelectedConfirmationItems();
+        },
+
+        onConfirmationItemStepInputChange: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("filteredConfirmation");
+            if (oCtx && !oCtx.getProperty("selected")) {
+                oCtx.setProperty("selected", true);
+                this._updateHasSelectedConfirmationItems();
+            }
+        },
+        
+        onConfirmServiceItemsButtonPress: function (oEvent) {
+            const oConfirmationModel = this.getView().getModel("confirmation");
+            const oFilteredModel = this.getView().getModel("filteredConfirmation");
+            const oViewModel = this.getView().getModel("viewModel");
+            const aItems = oFilteredModel.getProperty("/to_Item");
+            const iSelectedItemCount = aItems.filter(item => item.selected).length;
+
+            this._setBusy(true);
+
+            if (!oConfirmationModel) {
+                console.error(this._i18n().getText("modelNotFound", "confirmation"));
+                this._setBusy(false);
+                return;
+            }
+
+            if (!aItems || aItems.length === 0) {
+                MessageBox.warning(this._i18n().getText("noConfirmationItemsToConfirm"), {
+                    onClose: () => {
+                        this._switchTab("orders");
+                        this._setBusy(false);
+                        return;
+                    }
+                });
+                return;
+            }
+
+            if (iSelectedItemCount <= 0) {
+                MessageToast.show(this._i18n().getText("noConfirmationItemsSelectedToConfirm"));
+                this._setBusy(false);
+                return;
+            }
+
+
+            // Parse all Service Confirmation Items who are selected
+            var iProcessed = 0;
+
+            const checkIfAllDone = () => {
+                iProcessed++;
+                console.log("Processed items:", iProcessed, "of", iSelectedItemCount);
+                if (iProcessed >= iSelectedItemCount) {
+                    MessageBox.information(this._i18n().getText("patchServiceConfiormationComplete"), {
+                        onClose: () => {
+                            oFilteredModel.setProperty("/to_Item", aItems);
+                            oFilteredModel.refresh(true);
+                            this._setBusy(false);
+                            // ToDo: Check if all items in the list updates values in UI, if not, uncomment next line
+                            // this._loadServiceConfirmationItems(this._sOrderId);
+                        }
+                    });
+                    this._updateHasSelectedConfirmationItems();
+                }
+            };
+
+            aItems.forEach((oItem) => {
+                if (!oItem.selected) {
+                    return;
+                }
+                console.info("oItem:", oItem);
+                this._updateConfirmationItemQuantityToBackend(oItem).then(() => {
+                    // Update the Service Confirmation Item in the backend
+                    const sPath = "/A_ServiceConfirmationItem(ServiceConfirmation=%27" + oItem.ServiceConfirmation + "%27,ServiceConfirmationItem=%27" + oItem.ServiceConfirmationItem + "%27)";
+                    const oPayload = {
+                        ServiceConfItemIsCompleted: "X"
+                    };
+                    debugger;
+                    oConfirmationModel.update(sPath, oPayload, {
+                        method: "PATCH",
+                        success: (oData, response) => {
+                            // Uncheck the item in the UI
+                            oItem.selected = false;
+                            oItem.ServiceConfItemIsCompleted = "X";
+                            oFilteredModel.refresh(true);
+                            console.log("Update erfolgreich:", oData, response);
+                            checkIfAllDone();
+                        },
+                        error: (oError) => {
+                            console.error("Fehler beim Update:", oError);
+                            MessageToast.show(this._i18n().getText("updateServiceConfirmationItemError"));
+                            checkIfAllDone();
+                        }
+                    });
+                    
+                }).catch((oError) => {
+                    debugger;
+                    console.error("Fehler beim Aktualisieren der Menge:", oError);
+                    MessageToast.show(oError);
+                    checkIfAllDone();
+                });
+            });
+
+        },
+
+
+        /******************************************************
+         * Private Methoden
+         ******************************************************/
+
+        /**
+         * * Handler für die Route "Time".
+         * * Diese Methode wird aufgerufen, wenn die Route "Time" aktiviert wird.
+         * @param {sap.ui.base.Event} oEvent - Das Event-Objekt.
+         * Enthält Informationen über die Route und die Parameter.
+         * @private
+         * @example
+         * this.getRouter().getRoute("Time").attachPatternMatched(this._onObjectMatched, this);
+         * @returns {void}
+         * @throws {Error} Wenn keine gültige ServiceOrder gefunden wird.
+         * @description
+         * Lädt die ServiceOrder, ServiceOrderItems und zusätzliche Daten.
+         * Setzt die ServiceOrder-ID in der View-Model.
+         * Falls keine ServiceOrder gefunden wird, wird eine Fehlermeldung angezeigt.
+         */
         _onObjectMatched: function (oEvent) {
+
+            this._onResetUI();
+
             let sOrderId = oEvent.getParameter("arguments").serviceOrder;
 
             if (sOrderId) {
@@ -51,405 +304,110 @@ sap.ui.define([
                 this._sOrderId = sOrderId;
             } else {
                 MessageToast.show("Keine gültige ServiceOrder gefunden!");
-                this.getView().getModel("viewModel").setProperty("/tableVisible", false);
+                this._navBackOrHome("RouteMain");
             }
         },
 
-        onTabChange: function (oEvent) {
-            var sSelectedKey = oEvent.getParameter("item").getKey();
-            this.getView().getModel("viewModel").setProperty("/selectedTab", sSelectedKey);
-            // Prüfen ob sOrderId verfügbar ist
-            if (sSelectedKey === "orders" && this._sOrderId) {
-                this._loadServiceOrderItems(this._sOrderId);
-            } else if (sSelectedKey === "orders") {
-                MessageToast.show("Keine ServiceOrder-ID verfügbar");
+        /**
+         * @description
+         * * Setzt die UI-Modelle zurück.
+         * @private
+         */
+        _onResetUI: function () {
+            // View-Modell filteredConfirmation
+            const oFilteredModel = new JSONModel({
+                serviceOrder: {},
+                results: [],
+                to_Item: [],
+                additionalData: {},
+                hasItems: false,
+                hasSelectedItems: false,
+                itemsCount: '0'
+            });
+            this.getView().setModel(oFilteredModel, "filteredConfirmation");
+
+            // View-Modell serviceOrder
+            const oServiceOrderModel = new JSONModel({
+                to_Item: [],
+                itemsCount: '0'
+            });
+            this.getView().setModel(oServiceOrderModel, "serviceOrder");
+
+            // View-Modell UI 
+            let oViewModel = new JSONModel({
+                selectedTab: "orders", // Default to confirmations tab // orders we need as first
+                busy: false,
+                tableVisible: true,
+                ExecutingServiceEmployee: this._i18n().getText("noEmployeeAssigned")
+            });
+            this.getView().setModel(oViewModel, "viewModel");
+        },
+
+        /**
+         * @description
+         * - returns the i18n resource bundle.
+         * @private
+         * @returns {sap.ui.core.resource.ResourceBundle}
+         * - The i18n resource bundle.
+         * @example
+         * this._i18n().getText("key");
+         */
+        _i18n: function () {
+            return this.getOwnerComponent().getModel("i18n").getResourceBundle();
+        },
+
+        /**
+         * Navigiert zurück, oder wenn keine History vorhanden ist, zur definierten Route.
+         * @param {string} [sFallbackRoute="RouteMain"] - Die Route, zu der navigiert werden soll, wenn keine History vorhanden ist.
+         * @returns {void}
+         * @private
+         * @example
+         * this._navBackOrHome("RouteMain");
+         */
+        _navBackOrHome: function (sFallbackRoute = "RouteAuslieferungen") {
+            const oHistory = History.getInstance();
+            const sPreviousHash = oHistory.getPreviousHash();
+
+            if (sPreviousHash !== undefined) {
+                window.history.go(-1);
+            } else {
+                this.getOwnerComponent().getRouter().navTo(sFallbackRoute, {}, undefined, true);
             }
         },
 
-        _loadServiceOrder: function (sOrderId) {
-            const oServiceOrderModel = this.getOwnerComponent().getModel("serviceOrder");
-            const oJSONModel = this.getView().getModel("serviceOrder");
-
-            oServiceOrderModel.read(`/A_ServiceOrder('${sOrderId}')`, {
-                success: function (oData) {
-                    oJSONModel.setProperty("/serviceOrder", oData);
-                    oJSONModel.refresh(true);
-                    // this.getView().setModel(oJSONModel, "serviceOrder");
-                },
-                error: function (oError) {
-                    console.error(oError);
-                }
-            });
-
-        },
-
-        _loadServiceOrderItems: function (sOrderId) {
-            const oODataModel = this.getOwnerComponent().getModel("serviceOrder");
-            const oJSONModel = this.getView().getModel("serviceOrder");
-
-            oODataModel.read("/A_ServiceOrderItem", {
-                urlParameters: {
-                    "$select": "ServiceOrderItemCategory,QuantityUnit,Quantity,ServiceOrderItemDescription,Product,ServiceOrderItem",
-                    "$filter": `(ServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
-                },
-                success: (oData) => {
-                    oJSONModel.setProperty("/to_Item", oData.results);
-                    console.log("Received data:", oData);
-                    console.log("JSONModel data:", oJSONModel.getData());
-                    oJSONModel.refresh(true);
-                },
-                error: (oError) => {
-                    console.error("Error details:", oError);
-                    // MessageToast.show("Error fetching service order items: " + oError.message);
-                    oJSONModel.setProperty("/to_Item", []);
-                    oJSONModel.refresh(true);
-                }
-            });
-        },
-
-        _loadServiceOrderItems_original: function (sOrderId) {
-            console.log("Loading service order items for:", sOrderId);
-
-            // ODataModel aus der manifest.json
-            const oODataModel = this.getOwnerComponent().getModel("serviceOrder");
-            // JSONModel für die lokale Speicherung
-            const oJSONModel = this.getView().getModel("serviceOrder");
-
-            const sPath = "/A_ServiceOrderItem";
-            const oFilter = new Filter("ServiceOrder", FilterOperator.EQ, sOrderId);
-
-            oODataModel.read(sPath, {
-                filters: [oFilter],
-                success: function (oData) {
-
-                    const filteredItems = oData.results.filter(item => item.Product === "SRV_01" /*item.ServiceOrderItem === "10"*/);
-                    oJSONModel.setProperty("/to_Item", filteredItems);
-                    console.log("Received data:", oData);
-                    console.log("JSONModel data:", oJSONModel.getData());
-                    oJSONModel.refresh(true); // UI aktualisieren
-                    // MessageToast.show("Service order items loaded successfully!");
-                }.bind(this),
-                error: function (oError) {
-                    console.error("Error details:", oError);
-                    // MessageToast.show("Error fetching service order items: " + oError.message);
-                    oJSONModel.setProperty("/to_Item", []);
-                    oJSONModel.refresh(true);
-                }.bind(this)
-            });
-        },
-
-        _loadServiceConfirmationHeader: function (sOrderId) {
-            const oConfirmationModel = this.getView().getModel("confirmation");
-            const oFilteredModel = this.getView().getModel("filteredConfirmation");
-            const oViewModel = this.getView().getModel("viewModel");
-            const oFilter = new Filter("ReferenceServiceOrder", FilterOperator.EQ, sOrderId);
-
-            oConfirmationModel.read("/A_ServiceConfirmation", {
-                filters: [oFilter],
-                success: (oData) => {
-                    if (oData?.results && Array.isArray(oData.results) && oData.results.length > 0) {
-                        oFilteredModel.setProperty("/results", oData.results);
-                        this._loadServiceConfirmation(sOrderId);
-                        //this._loadServiceConfirmationItem(sOrderId);
-                        this._loadAdditionalData(sOrderId);
-                    } else {
-                        oFilteredModel.setProperty("/results", []);
-                        oViewModel.setProperty("/tableVisible", false);
-                        MessageToast.show("Keine Service Confirmations gefunden!");
-                    }
-                },
-                error: (oError) => {
-                    console.error("Fehler beim Laden der Daten:", oError);
-                    MessageToast.show("Fehler beim Laden der Daten!");
-                    oFilteredModel.setProperty("/results", []);
-                    oViewModel.setProperty("/tableVisible", false);
-                }
-            });
-        },
-
-        _loadServiceConfirmation: function (sOrderId) {
-            const oConfirmationModel = this.getView().getModel("confirmation");
-            const oFilteredModel = this.getView().getModel("filteredConfirmation");
-            const oViewModel = this.getView().getModel("viewModel");
-            const oFilter = new Filter("ReferenceServiceOrder", FilterOperator.EQ, sOrderId);
-
-            oConfirmationModel.read("/A_ServiceConfirmationItem", {
-                filters: [oFilter],
-                success: (oData) => {
-                    if (oData?.results && Array.isArray(oData.results) && oData.results.length > 0) {
-                        oData.results.forEach(item => {
-                            if (!item.ActualServiceStartDateTime) {
-                                item.ActualServiceStartDateTime = new Date().toISOString(); // Aktuelles Datum als Fallback
-                            }
-                            if (!item.ActualServiceEndDateTime) {
-                                item.ActualServiceEndDateTime = new Date().toISOString(); // Aktuelles Datum als Fallback
-                            }
-                        });
-                        const filteredItems = oData.results.filter(item => item.ServiceConfirmationItem === "10");
-                        oFilteredModel.setProperty("/to_Item", filteredItems);
-                        oFilteredModel.setProperty("/hasItems", filteredItems.length > 0);
-                        oViewModel.setProperty("/tableVisible", filteredItems.length > 0);
-                        const sServiceEmployee = filteredItems[0]?.ExecutingServiceEmployee || "";
-                        this.getOwnerComponent().setModel(new sap.ui.model.json.JSONModel({ serviceEmployee: sServiceEmployee }), "global");
-                    } else {
-                        oFilteredModel.setProperty("/to_Item", []);
-                        oFilteredModel.setProperty("/hasItems", false);
-                        oViewModel.setProperty("/tableVisible", false);
-                        MessageToast.show("Keine Items für diese Service Confirmation gefunden!");
-                    }
-                },
-                error: (oError) => {
-                    console.error("Fehler beim Laden der Daten:", oError);
-                    MessageToast.show("Fehler beim Laden der Daten!");
-                    oFilteredModel.setProperty("/to_Item", []);
-                    oFilteredModel.setProperty("/hasItems", false);
-                    oViewModel.setProperty("/tableVisible", false);
-                }
-            });
-        },
-
-
-
-        _loadServiceConfirmationItem: function (sOrderId) {
-            const oODataModel = this.getOwnerComponent().getModel("confirmationService");
-            const oFilteredConfirmationModel = this.getView().getModel("filteredConfirmation");
-            const oViewModel = this.getView().getModel("viewModel");
-
-            oODataModel.read("/A_ServiceConfirmationItem", {
-                urlParameters: {
-                    "$select": "ServiceConfirmation,ServiceConfirmationItem,Product,ServiceConfItemDescription,Quantity,QuantityUnit",
-                    "$filter": `(ReferenceServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
-                },
-                success: (oData) => {
-                    if (oData?.results?.length) {
-                        const aConfirmationItems = oData.results;
-                        aConfirmationItems.forEach(item => {
-                            if (!item.ActualServiceStartDateTime) {
-                                item.ActualServiceStartDateTime = new Date().toISOString(); // Aktuelles Datum als Fallback
-                            }
-                            if (!item.ActualServiceEndDateTime) {
-                                item.ActualServiceEndDateTime = new Date().toISOString();
-                            }
-                        });
-                        debugger;
-                        oFilteredConfirmationModel.setProperty("/to_Item", aConfirmationItems);
-                        oFilteredConfirmationModel.setProperty("/hasItems", aConfirmationItems.length > 0);
-                        oViewModel.setProperty("/tableVisible", aConfirmationItems.length > 0);
-                    } else {
-                        oFilteredConfirmationModel.setProperty("/to_Item", []);
-                        oFilteredConfirmationModel.setProperty("/hasItems", false);
-                        oViewModel.setProperty("/tableVisible", false);
-                    }
-                },
-                error: (oError) => {
-                    debugger;
-                    console.error("Error details:", oError);
-                    oFilteredConfirmationModel.setProperty("/to_Item", []);
-                    oFilteredConfirmationModel.setProperty("/to_Item", []);
-                    oFilteredConfirmationModel.setProperty("/hasItems", false);
-                    oViewModel.setProperty("/tableVisible", false);
-                }
-            });
-        },
-
-        _loadAdditionalData: function (sOrderId) {
-            const oMainModel = this.getView().getModel();
-            const oFilteredModel = this.getView().getModel("filteredConfirmation");
-            const oFilter = new Filter("ServiceOrder", FilterOperator.EQ, sOrderId);
-
-            oMainModel.read("/YY1_ServiceConfirmation", {
-                filters: [oFilter],
-                success: (oData) => {
-                    if (oData?.results && oData.results.length > 0) {
-                        oFilteredModel.setProperty("/additionalData", oData.results[0]);
-                    } else {
-                        oFilteredModel.setProperty("/additionalData", {});
-                        MessageToast.show("Keine zusätzlichen Daten in YY1_ServiceConfirmation gefunden!");
-                    }
-                },
-                error: (oError) => {
-                    console.error("Fehler beim Laden der zusätzlichen Daten:", oError);
-                    MessageToast.show("Fehler beim Laden der zusätzlichen Daten! Details: " + oError.message);
-                    oFilteredModel.setProperty("/additionalData", {});
-                }
-            });
-        },
-
-        onConfirmButtonPress: function (oEvent) {
-            const oFilteredModel = this.getView().getModel("filteredConfirmation");
-            const oServiceOrderModel = this.getView().getModel("serviceOrder");
-            const oConfirmationModel = this.getView().getModel("confirmation");
-            const aItems = oServiceOrderModel.getProperty("/to_Item");
-            const oServiceOrder = oServiceOrderModel.getProperty("/serviceOrder");
-
-    //         if (!oServiceOrderModel) {
-     //            console.error(this._getText("modelNotFound", "serviceOrder"));
-     //        }
-
-      //       if (!oConfirmationModel) {
-      //           console.error(this._getText("modelNotFound", "confirmation"));
-       //      }
-
-      //       if (!aItems || aItems.length === 0) {
-       //          MessageToast.show(this._getText("noItemsToConfirm"));
-       //          return;
-       //      }
-
-            // Sammle Informationen der Service Order
-            var sServiceOrderId = oServiceOrder.ServiceOrder;
-            var sServiceObjectType = oServiceOrder.ServiceObjectType;
-            var sServiceOrderType = oServiceOrder.ServiceOrderType;
-            var aServiceOrderItemsToConfirm = [];
-
-            // Fehlende Felder sammeln
-        //     let aFehlendeFelder = [];
-       //      if (!sServiceOrderId) aFehlendeFelder.push("confirmation");
-      //       if (!sServiceObjectType) aFehlendeFelder.push("confirmation");
-       //      if (!sServiceOrderType) aFehlendeFelder.push("confirmation");
-// 
-            // Hinweis anzeigen, wenn etwas fehlt
-       //      if (aFehlendeFelder.length > 0) {
-      //           MessageToast.show(this._getText("bitteFelderAusfuellen", "confirmation", [aFehlendeFelder.join(", ")]));
-      //           return;
-    //         }
-
-
-            // Sammle Informationen der Service Order Items
-            aItems.forEach((oOrderItem) => {
-                aServiceOrderItemsToConfirm.push({
-                    ReferenceServiceOrder: sServiceOrderId,
-                    ReferenceServiceOrderItem: oOrderItem.ServiceOrderItem
-                });
-            });
-
-            //Quantity: String(oOrderItem.Quantity)
-
-
-
-
-            // Fülle das "JSON"-Objekt mit den gesammelten Informationen
-            const oPayload = {
-                ServiceConfirmationType: sServiceOrderType,
-                ServiceObjectType: sServiceObjectType,
-                ReferenceServiceOrder: sServiceOrderId,
-                ServiceConfirmationIsFinal: "N",
-                to_Item: {
-                    results: aServiceOrderItemsToConfirm
-                }
-            };
-
-            debugger;
-
-            oConfirmationModel.create("/A_ServiceConfirmation", oPayload, {
-                success: (oData , response) => {
-                    console.log("Response:", oData, response);
-                    MessageToast.show(this._getText("confirmationSuccess"));
-
-                },
-                error: (oError) => {
-                    console.error(oError);
-                    MessageToast.show(this._getText("confirmationSuccess"));
-                }
-            });
-
-        },
-
-        onSave: function () {
-            const oFilteredModel = this.getView().getModel("filteredConfirmation");
-            const oConfirmationModel = this.getView().getModel("confirmation");
-            const aItems = oFilteredModel.getProperty("/to_Item");
-
-            if (!aItems || aItems.length === 0) {
-                MessageToast.show("Keine Items zum Speichern vorhanden!");
+        
+        _switchTab: function (sTabName) {
+            if(sTabName !== "orders" && sTabName !== "confirmations") {
+                console.error("Invalid tab name:", sTabName);
                 return;
             }
-
-            // Batch-Gruppe als "deferred" definieren
-            oConfirmationModel.setDeferredGroups(["updateServiceConfirmationItems"]);
-            oConfirmationModel.setUseBatch(true);
-            const mBatchOperations = [];
-
-            // Hilfsfunktion zur Konvertierung von Datumswerten in ISO-Format
-            const formatDateToISO = (oDate) => {
-                if (!oDate) return null;
-                const oDateTime = new Date(oDate);
-                return oDateTime.toISOString(); // Konvertiert zu z. B. "2025-04-03T00:00:00.000Z"
-            };
-
-            // Für jedes Item prüfen, ob es existiert, und entsprechend erstellen oder aktualisieren
-            aItems.forEach((oItem, iIndex) => {
-                // Daten für das Erstellen oder Aktualisieren vorbereiten
-                const oData = {
-                    ServiceConfirmation: oItem.ServiceConfirmation || "", // Muss gesetzt sein
-                    ServiceConfirmationItem: oItem.ServiceConfirmationItem || "", // Muss gesetzt sein
-                    Quantity: oItem.Quantity ? parseFloat(oItem.Quantity).toFixed(3) : "0.000",
-                    QuantityUnit: oItem.QuantityUnit || "HR",
-                    ActualServiceDuration: oItem.ActualServiceDuration ? parseFloat(oItem.ActualServiceDuration).toFixed(2) : "0.00",
-                    ActualServiceDurationUnit: oItem.ActualServiceDurationUnit || "HR",
-                    ActualServiceStartDateTime: formatDateToISO(oItem.ActualServiceStartDateTime),
-                    ActualServiceEndDateTime: formatDateToISO(oItem.ActualServiceEndDateTime),
-                    ReferenceServiceOrder: oItem.ReferenceServiceOrder || "", // Muss gesetzt sein
-                    ReferenceServiceOrderItem: oItem.ReferenceServiceOrderItem || "0",
-                    ServiceConfItemDescription: oItem.ServiceConfItemDescription || "Arbeitszeit",
-                    Product: oItem.Product || "SRV_01", // Standardprodukt, falls nicht gesetzt
-                    ExecutingServiceEmployee: oItem.ExecutingServiceEmployee || "9980000007", // Standardwert, falls nicht gesetzt
-                    ServiceConfItemCategory: oItem.ServiceConfItemCategory || "SCP1", // Standardkategorie
-                    ServiceConfItemIsCompleted: oItem.ServiceConfItemIsCompleted || "X",
-                    Language: oItem.Language || "DE"
-                };
-
-                console.log(`Update-Daten für Item ${oItem.ServiceConfirmationItem}:`, oData); // Debugging
-
-                // Pfad für das Item in der API
-                const sPath = `/A_ServiceConfirmationItem(ServiceConfirmation='${oItem.ServiceConfirmation}',ServiceConfirmationItem='${oItem.ServiceConfirmationItem}')`;
-
-                // Prüfen, ob der Eintrag existiert
-                oConfirmationModel.read(sPath, {
-                    success: (oExistingData) => {
-                        // Eintrag existiert → Aktualisieren (PATCH)
-                        const oUpdateData = {
-                            Quantity: oData.Quantity,
-                            QuantityUnit: oData.QuantityUnit,
-                            ActualServiceDuration: oData.ActualServiceDuration,
-                            ActualServiceDurationUnit: oData.ActualServiceDurationUnit,
-                            ActualServiceStartDateTime: oData.ActualServiceStartDateTime,
-                            ActualServiceEndDateTime: oData.ActualServiceEndDateTime
-                        };
-
-                        mBatchOperations.push({
-                            method: "PATCH",
-                            path: sPath,
-                            data: oUpdateData
-                        });
-
-                        // Batch-Request ausführen, wenn alle Items verarbeitet wurden
-                        if (mBatchOperations.length === aItems.length) {
-                            this._submitBatch(oConfirmationModel, mBatchOperations, aItems[0].ReferenceServiceOrder);
-                        }
-                    },
-                    error: (oError) => {
-                        // Eintrag existiert nicht → Erstellen (POST)
-                        if (oError.statusCode === 404) {
-                            mBatchOperations.push({
-                                method: "POST",
-                                path: "/A_ServiceConfirmationItem",
-                                data: oData
-                            });
-                        } else {
-                            console.error("Fehler beim Prüfen des Eintrags:", oError);
-                            MessageToast.show("Fehler beim Prüfen des Eintrags!");
-                        }
-
-                        // Batch-Request ausführen, wenn alle Items verarbeitet wurden
-                        if (mBatchOperations.length === aItems.length) {
-                            this._submitBatch(oConfirmationModel, mBatchOperations, aItems[0].ReferenceServiceOrder);
-                        }
-                    }
-                });
-            });
+            
+            const oViewModel = this.getView().getModel("viewModel");
+            if (oViewModel) {
+                oViewModel.setProperty("/selectedTab", sTabName);
+                oViewModel.refresh(true);
+                // if (sTabName === "orders") {
+                //     this._loadServiceConfirmationItems(this._sOrderId);
+                // }
+            }
         },
 
-        // Hilfsfunktion zum Ausführen des Batch-Requests
+        /**
+         * * Führt den Batch-Submit durch und aktualisiert die Service Confirmation Items.
+         * @param {sap.ui.model.odata.v2.ODataModel} oConfirmationModel - Das OData-Modell für die Service Confirmation.
+         * @param {Array} mBatchOperations - Die Batch-Operationen, die ausgeführt werden sollen.
+         * @param {string} sReferenceServiceOrder - Die Referenz-Service-Order.
+         * @returns {void}
+         * @private
+         * @description
+         * * Diese Methode führt den Batch-Submit durch und aktualisiert die Service Confirmation Items.
+         * * Wenn keine Änderungen vorhanden sind, wird eine Nachricht angezeigt.
+         * * Bei Erfolg wird eine Erfolgsmeldung angezeigt und die Service Confirmation neu geladen.
+         * * Bei Fehlern wird eine Fehlermeldung angezeigt.
+         * @example
+         * this._submitBatch(oConfirmationModel, mBatchOperations, sReferenceServiceOrder);
+         * @throws {Error} Wenn ein Fehler beim Speichern der Änderungen auftritt.
+         */
         _submitBatch: function (oConfirmationModel, mBatchOperations, sReferenceServiceOrder) {
             if (mBatchOperations.length === 0) {
                 MessageToast.show("Keine Änderungen zum Speichern!");
@@ -475,38 +433,318 @@ sap.ui.define([
                 }
             });
         },
-
-
-
+        
+        
+        onReleaseOrderItemPress: function (oEvent) {
+            const oCtx = oEvent.getSource().getBindingContext("serviceOrder");
+            if (!oCtx) {
+                return;
+            }
+            this._setBusy(true);
+            
+            const oServiceOrderModel = this.getView().getModel("serviceOrder");
+            const oServiceOrderItem = oCtx.getObject();
+            const sActionKey = this.serviceOrderItemActions.RELEASE;
+            
+            this._updateServiceOrderItem(oServiceOrderItem, sActionKey).then(() => {
+                MessageToast.show(this._i18n().getText("releaseServiceOrderItemSuccess"));
+                oServiceOrderItem.ServiceOrderItemIsReleased = "X";
+                oServiceOrderItem.selected = false;
+                
+                oServiceOrderModel.refresh(true);
+                
+                this._setBusy(false);
+                // this._loadServiceOrderItems(sServiceOrder);
+            }).catch((oError) => {
+                console.error("Fehler beim Aktualisieren der Service Order Item:", oError);
+                MessageToast.show(this._i18n().getText("releaseServiceOrderItemError"));
+            });
+        },
+        
+        
         /**
-         * Lädt den Text aus der i18n-Datei.
-         * @param {string} [sKey] - Der Schlüssel des Textes in der i18n-Datei.
-         * @returns {string} - Der Text aus der i18n-Datei.
-         * @private
+         * @description
+         * * Diese Methode aktualisiert den Service Order Item im Backend.
+         * @example
+         * this._updateServiceOrderItem(oItem, ServiceOrderItemActions.RELEASE);
          */
-        _getText: function (sKey) {
-            return this.getOwnerComponent().getModel("i18n").getResourceBundle().getText(sKey);
+        _updateServiceOrderItem: function (oConfirmationItem, sActionKey) {
+            const oServiceOrderModel = this.getOwnerComponent().getModel("serviceOrder");
+            if (!oServiceOrderModel) {
+                console.error(this._i18n().getText("modelNotFound", "serviceOrder"));
+                return;
+            }
+        
+            if (!sActionKey || !oConfirmationItem) {
+                console.error("Fehlende Parameter für Update");
+                return;
+            }
+        
+            const sServiceOrder = oConfirmationItem.ServiceOrder;
+            const sServiceOrderItem = oConfirmationItem.ServiceOrderItem;
+            const sPath = `/A_ServiceOrderItem(ServiceOrder='${sServiceOrder}',ServiceOrderItem='${sServiceOrderItem}')`;
+        
+            const oPayload = {};
+            oPayload[sActionKey] = "X";
+        
+            return new Promise((resolve, reject) => {
+                oServiceOrderModel.update(sPath, oPayload, {
+                    method: "PATCH",
+                    success: resolve,
+                    error: reject
+                });
+            });
         },
 
-        /**
-         * Navigiert zurück, oder wenn keine History vorhanden ist, zur definierten Route.
-         * @param {string} [sFallbackRoute="RouteMain"] - Die Route, zu der navigiert werden soll, wenn keine History vorhanden ist.
-         * @returns {void}
-         * @private
-         * @example
-         * this._navBackOrHome("RouteMain");
-         */
-        _navBackOrHome: function (sFallbackRoute = "RouteAuslieferungen") {
-            const oHistory = History.getInstance();
-            const sPreviousHash = oHistory.getPreviousHash();
-
-            if (sPreviousHash !== undefined) {
-                window.history.go(-1);
-            } else {
-                this.getOwnerComponent().getRouter().navTo(sFallbackRoute, {}, undefined, true);
+        _updateHasSelectedConfirmationItems: function () {
+            const oFilteredModel = this.getView().getModel("filteredConfirmation");
+            if (oFilteredModel) {
+                const aItems = oFilteredModel.getProperty("/to_Item") || [];
+                const bHasSelected = aItems.some(item => item.selected === true);
+                oFilteredModel.setProperty("/hasSelectedItems", bHasSelected);
             }
         },
 
+        _updateConfirmationItemQuantityToBackend: function (oConfirmationItem) {
+            return new Promise((resolve, reject) => {
+
+                debugger;
+                if (String(oConfirmationItem.Quantity) == String(oConfirmationItem.backendQuantity)) {
+                    return resolve(); // No update needed
+                }
+
+                const oConfirmationModel = this.getView().getModel("confirmation");
+                const sServiceConfirmation = oConfirmationItem.ServiceConfirmation;
+                const sServiceConfirmationItem = oConfirmationItem.ServiceConfirmationItem;
+                const newQuantity = oConfirmationItem.Quantity;
+
+                debugger;
+                if (!sServiceConfirmation || !sServiceConfirmationItem || !newQuantity) {
+                    debugger;
+                    return reject(this._i18n().getText("updateServiceConfirmationItemMissingRequiredFields"));
+                }
+                
+                const sPath = `/A_ServiceConfirmationItem(ServiceConfirmation='${sServiceConfirmation}',ServiceConfirmationItem='${sServiceConfirmationItem}')`;
+                const oPayload = {
+                    ExecutingServiceEmployee: "9980000003", // ToDo: delete this line and check earlier if employee is set
+                    Quantity: newQuantity.toFixed(3), // Format to 3 decimal places as string
+                };
+
+                oConfirmationModel.update(sPath, oPayload, {
+                    method: "PATCH",
+                    success: (oData, response) => {
+                        console.log("Update1:", oData, response);
+                        resolve();
+                    },
+                    error: (oError) => {
+                        debugger;
+                        console.error("Update ServiceConfirmationItem error:", oError);
+                        reject(this._i18n().getText("updateServiceConfirmationItemError"));
+                    }
+                });
+
+            });
+
+        },
+
+        _loadServiceOrder: function (sOrderId) {
+            const oServiceOrderModel = this.getOwnerComponent().getModel("serviceOrder");
+            const oJSONModel = this.getView().getModel("serviceOrder");
+
+            oServiceOrderModel.read(`/A_ServiceOrder('${sOrderId}')`, {
+                success: function (oData) {
+                    oJSONModel.setProperty("/serviceOrder", oData);
+                    oJSONModel.refresh(true);
+                    // this.getView().setModel(oJSONModel, "serviceOrder");
+                },
+                error: function (oError) {
+                    console.error(oError);
+                }
+            });
+
+        },
+
+        _loadServiceOrderItems: function (sOrderId) {
+            const oODataModel = this.getOwnerComponent().getModel("serviceOrder");
+            const oJSONModel = this.getView().getModel("serviceOrder");
+            const oViewModel = this.getView().getModel("viewModel");
+
+            oODataModel.read("/A_ServiceOrderItem", {
+                urlParameters: {
+                    "$select": "ServiceOrder,ServiceOrderItemCategory,QuantityUnit,Quantity,ServiceOrderItemDescription,Product,ServiceOrderItem,ExecutingServiceEmployee,ServiceOrderItemIsReleased,ServiceOrderItemIsCompleted,ServiceOrderItemIsRejected",
+                    "$filter": `(ServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
+                },
+                success: (oData) => {
+                    const aProcessedItems = oData.results.map((item) => {
+                        return {
+                            ...item,
+                            selected: false
+                        };
+                    });
+
+                    oJSONModel.setProperty("/to_Item", aProcessedItems);
+                    oJSONModel.setProperty("/hasItems", aProcessedItems.length > 0);
+                    oJSONModel.setProperty("/itemsCount", aProcessedItems.length);
+                    oJSONModel.refresh(true);
+
+                    // Read and set employee name
+                    if (oViewModel.getProperty("/ExecutingServiceEmployee") === this._i18n().getText("noEmployeeAssigned")) {
+                        const sEmployeeId = aProcessedItems.find(item => item.ExecutingServiceEmployee && item.ExecutingServiceEmployee !== "")?.ExecutingServiceEmployee;
+                        this._getBusinessPartnerName(sEmployeeId).then((name) => oViewModel.setProperty("/ExecutingServiceEmployee", name));
+                    }
+                },
+                error: (oError) => {
+                    console.error("Error details:", oError);
+                    // MessageToast.show("Error fetching service order items: " + oError.message);
+                    oJSONModel.setProperty("/to_Item", []);
+                    oJSONModel.refresh(true);
+                }
+            });
+        },
+
+        _loadServiceConfirmationHeader: function (sOrderId) {
+            const oConfirmationModel = this.getView().getModel("confirmation");
+            const oFilteredModel = this.getView().getModel("filteredConfirmation");
+            const oViewModel = this.getView().getModel("viewModel");
+            const oFilter = new Filter("ReferenceServiceOrder", FilterOperator.EQ, sOrderId);
+
+            oConfirmationModel.read("/A_ServiceConfirmation", {
+                filters: [oFilter],
+                success: (oData) => {
+                    if (oData?.results && Array.isArray(oData.results) && oData.results.length > 0) {
+                        oFilteredModel.setProperty("/results", oData.results);
+                        // this._loadServiceConfirmation(sOrderId);
+                        this._loadServiceConfirmationItems(sOrderId);
+                        this._loadAdditionalData(sOrderId);
+                    } else {
+                        oFilteredModel.setProperty("/results", []);
+                        oViewModel.setProperty("/tableVisible", false);
+                        // MessageToast.show("Keine Service Confirmations gefunden!");
+                    }
+                },
+                error: (oError) => {
+                    console.error("Fehler beim Laden der Daten:", oError);
+                    MessageToast.show("Fehler beim Laden der Daten!");
+                    oFilteredModel.setProperty("/results", []);
+                    oViewModel.setProperty("/tableVisible", false);
+                }
+            });
+        },
+
+        _loadServiceConfirmationItems: function (sOrderId) {
+            const oDataModel = this.getOwnerComponent().getModel("confirmation");
+            const oFilteredConfirmationModel = this.getView().getModel("filteredConfirmation");
+            const oViewModel = this.getView().getModel("viewModel");
+
+
+            oDataModel.read("/A_ServiceConfirmationItem", {
+                urlParameters: {
+                    "$select": "ReferenceServiceOrder,ServiceConfirmation,ServiceConfirmationItem,Product,ServiceConfItemDescription,Quantity,QuantityUnit,ExecutingServiceEmployee,ActualServiceStartDateTime,ActualServiceEndDateTime,ServiceConfItemIsCompleted",
+                    "$filter": `(ReferenceServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
+                },
+                success: (oData) => {
+                    if (oData?.results?.length) {
+                        const aItems = oData.results.map((item) => {
+                            return {
+                                ...item,
+                                selected: false,
+                                backendQuantity: item.Quantity,
+                                ActualServiceStartDateTime: item.ActualServiceStartDateTime || new Date().toISOString(),
+                                ActualServiceEndDateTime: item.ActualServiceEndDateTime || new Date().toISOString(),
+                            };
+                        });
+
+                        oFilteredConfirmationModel.setProperty("/to_Item", aItems);
+                        oFilteredConfirmationModel.setProperty("/itemsCount", aItems.length);
+                        oFilteredConfirmationModel.setProperty("/hasItems", aItems.length > 0);
+                        oViewModel.setProperty("/tableVisible", aItems.length > 0);
+
+                        if (oViewModel.getProperty("/ExecutingServiceEmployee") === this._i18n().getText("noEmployeeAssigned")) {
+                            const sEmployeeId = aItems.find(item => item.ExecutingServiceEmployee && item.ExecutingServiceEmployee !== "")?.ExecutingServiceEmployee;
+                            this._getBusinessPartnerName(sEmployeeId).then((name) => oViewModel.setProperty("/ExecutingServiceEmployee", name));
+                        }
+                    } else {
+                        oFilteredConfirmationModel.setProperty("/to_Item", []);
+                        oFilteredConfirmationModel.setProperty("/itemsCount", '0');
+                        oFilteredConfirmationModel.setProperty("/hasItems", false);
+                        oViewModel.setProperty("/tableVisible", false);
+                    }
+                },
+                error: (oError) => {
+                    console.error("Error details:", oError);
+                    oFilteredConfirmationModel.setProperty("/to_Item", []);
+                    oFilteredConfirmationModel.setProperty("/itemsCount", '0');
+                    oFilteredConfirmationModel.setProperty("/hasItems", false);
+                    oViewModel.setProperty("/tableVisible", false);
+                }
+            });
+        },
+
+        _loadAdditionalData: function (sOrderId) {
+            const oMainModel = this.getView().getModel("YY1");
+            const oFilteredModel = this.getView().getModel("filteredConfirmation");
+            const oFilter = new Filter("ServiceOrder", FilterOperator.EQ, sOrderId);
+
+            oMainModel.read("/YY1_ServiceConfirmation", {
+                filters: [oFilter],
+                success: (oData) => {
+                    if (oData?.results && oData.results.length > 0) {
+                        oFilteredModel.setProperty("/additionalData", oData.results[0]);
+                    } else {
+                        oFilteredModel.setProperty("/additionalData", {});
+                        MessageToast.show("Keine zusätzlichen Daten in YY1_ServiceConfirmation gefunden!");
+                    }
+                },
+                error: (oError) => {
+                    console.error("Fehler beim Laden der zusätzlichen Daten:", oError);
+                    MessageToast.show("Fehler beim Laden der zusätzlichen Daten! Details: " + oError.message);
+                    oFilteredModel.setProperty("/additionalData", {});
+                }
+            });
+        },
+
+        _mapServiceConfirmationType: function (sFromType) {
+            const oServiceTypeMap = {
+                "SVO1": "SVC1",
+                "SVO2": "SVC2",
+                // "IN": "OUT"
+            };
+            return oServiceTypeMap[sFromType] || null;
+        },
+
+        _setBusy: function (bBusy) {
+            const oViewModel = this.getView().getModel("viewModel");
+            oViewModel.setProperty("/busy", bBusy);
+        },
+
+
+        /**
+         * @description
+         * * Diese Methode liest den Namen des Geschäftspartners aus dem API OData-Modell.
+         * * Wenn der Name nicht gefunden wird, wird eine Fehlermeldung zurückgegeben.
+         * @param {string} sPartnerId - Die ID des Geschäftspartners.
+         * @returns {Promise<string>} - Ein Promise, das den Namen des Geschäftspartners zurückgibt.
+         * @private
+         * @example
+         * this._getBusinessPartnerName("12345").then(name => {
+         *     console.log("Business Partner Name:", name);
+         * });
+         * @throws {Error} Wenn ein Fehler beim Laden der Daten auftritt.
+         */
+        _getBusinessPartnerName(sPartnerId) {
+            if (!sPartnerId) {
+                return new Promise((resolve) => resolve(this._i18n().getText("noEmployeeAssigned")));
+            }
+
+            const oBPModel = this.getOwnerComponent().getModel("businessPartner");
+
+            return new Promise((resolve) => {
+                oBPModel.read("/A_BusinessPartner('" + sPartnerId + "')", {
+                    success: (oBPData) => resolve(oBPData?.BusinessPartnerName || sPartnerId),
+                    error: () => resolve(this._i18n().getText("noEmployeeAssigned"))
+                });
+            });
+        }
 
     });
 });

@@ -33,6 +33,9 @@
     <edmx:Reference Uri="./sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_VALIDATION',Version='0001',SAP__Origin='LOCAL')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
         <edmx:Include Namespace="Org.OData.Validation.V1" Alias="Validation"/>
     </edmx:Reference>
+    <edmx:Reference Uri="./sap/opu/odata/iwfnd/catalogservice;v=2/Vocabularies(TechnicalName='%2FIWBEP%2FVOC_CORE',Version='0001',SAP__Origin='LOCAL')/$value" xmlns:edmx="http://docs.oasis-open.org/odata/ns/edmx">
+        <edmx:Include Namespace="Org.OData.Core.V1" Alias="Core"/>
+    </edmx:Reference>
     <edmx:DataServices m:DataServiceVersion="2.0">
         <Schema Namespace="API_SERVICE_CONFIRMATION_SRV" xml:lang="en" sap:schema-version="1" xmlns="http://schemas.microsoft.com/ado/2008/09/edm">
             <EntityType Name="A_ServiceConfirmationType" sap:label="Service Confirmation" sap:content-version="1">
@@ -662,7 +665,7 @@
                 </Annotation>
             </Annotations>
             <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities/A_ServiceConfirmation" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-                <Annotation Term="Capabilities.NavigationRestrictions">
+                <Annotation Term="Capabilities.NavigationRestrictions" Qualifier="A_ServiceConfirmation">
                     <Record>
                         <PropertyValue Property="RestrictedProperties">
                             <Collection>
@@ -744,7 +747,7 @@
                 </Annotation>
             </Annotations>
             <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities/A_ServiceConfirmationItem" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-                <Annotation Term="Capabilities.NavigationRestrictions">
+                <Annotation Term="Capabilities.NavigationRestrictions" Qualifier="A_ServiceConfirmationItem">
                     <Record>
                         <PropertyValue Property="RestrictedProperties">
                             <Collection>
@@ -826,7 +829,7 @@
                 </Annotation>
             </Annotations>
             <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities/A_SrvcConfItemPartner" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-                <Annotation Term="Capabilities.NavigationRestrictions">
+                <Annotation Term="Capabilities.NavigationRestrictions" Qualifier="A_SrvcConfItemPartner">
                     <Record>
                         <PropertyValue Property="RestrictedProperties">
                             <Collection>
@@ -844,7 +847,7 @@
                 </Annotation>
             </Annotations>
             <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities/A_SrvcConfPartner" xmlns="http://docs.oasis-open.org/odata/ns/edm">
-                <Annotation Term="Capabilities.NavigationRestrictions">
+                <Annotation Term="Capabilities.NavigationRestrictions" Qualifier="A_SrvcConfPartner">
                     <Record>
                         <PropertyValue Property="RestrictedProperties">
                             <Collection>
@@ -1614,7 +1617,7 @@
                                         </Record>
                                     </PropertyValue>
                                 </Record>
-                                <Record>
+                                <!-- <Record>
                                     <PropertyValue Property="NavigationProperty" NavigationPropertyPath="to_ServiceConfirmation"/>
                                     <PropertyValue Property="ReadRestrictions">
                                         <Record>
@@ -1622,7 +1625,7 @@
                                             <PropertyValue Property="LongDescription" String="Reads the header and item information of a service confirmation. Also, it reads service confirmation ID, description, partner functions, and organizational data."/>
                                         </Record>
                                     </PropertyValue>
-                                </Record>
+                                </Record> -->
                                 <Record>
                                     <PropertyValue Property="NavigationProperty" NavigationPropertyPath="to_Text"/>
                                     <PropertyValue Property="InsertRestrictions">
@@ -1840,7 +1843,7 @@
                                         </Record>
                                     </PropertyValue>
                                 </Record>
-                                <Record>
+                                <!-- <Record>
                                     <PropertyValue Property="NavigationProperty" NavigationPropertyPath="to_Item"/>
                                     <PropertyValue Property="DeleteRestrictions">
                                         <Record>
@@ -1848,7 +1851,7 @@
                                             <PropertyValue Property="LongDescription" String="Deletes item information of a service confirmation such as Quantity, Product, Item Category, and so on by key."/>
                                         </Record>
                                     </PropertyValue>
-                                </Record>
+                                </Record> -->
                                 <Record>
                                     <PropertyValue Property="NavigationProperty" NavigationPropertyPath="to_Duration"/>
                                     <PropertyValue Property="ReadRestrictions">
@@ -1928,7 +1931,10 @@
                     </Record>
                 </Annotation>
             </Annotations>
-            <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities" xmlns="http://docs.oasis-open.org/odata/ns/edm"/>
+            <Annotations Target="API_SERVICE_CONFIRMATION_SRV.API_SERVICE_CONFIRMATION_SRV_Entities" xmlns="http://docs.oasis-open.org/odata/ns/edm">
+                <Annotation Term="Common.Label" String="Service Confirmation Metadata">
+                </Annotation>
+            </Annotations>
             <atom:link rel="self" href="https://my418723-api.s4hana.cloud.sap/sap/opu/odata/sap/API_SERVICE_CONFIRMATION_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
             <atom:link rel="latest-version" href="https://my418723-api.s4hana.cloud.sap/sap/opu/odata/sap/API_SERVICE_CONFIRMATION_SRV/$metadata" xmlns:atom="http://www.w3.org/2005/Atom"/>
         </Schema>

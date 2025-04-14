@@ -1,42 +1,91 @@
-<mvc:View controllerName="pho.com.serviceoverview.controller.Time"
+<mvc:View
+    xmlns:core="sap.ui.core"
+    controllerName="pho.com.serviceoverview.controller.Time"
+	xmlns:smartTable="sap.ui.comp.smarttable"
     xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m" displayBlock="true">
-    <Page title="{i18n>serviceConfirmation}" class="sapUiContentPadding sapUiResponsivePadding--header sapUiResponsivePadding--content">
+    xmlns="sap.m"
+    displayBlock="true"
+>
+    <Page
+        title="{i18n>serviceConfirmation}"
+        class="sapUiContentPadding sapUiResponsivePadding--header sapUiResponsivePadding--content"
+        busy="{viewModel>/busy}"
+        busyIndicatorDelay="0"
+    >
         <content>
-            <!-- ObjectHeader -->
-
-
-            <ObjectHeader title= "{filteredConfirmation>/to_Item/0/ReferenceServiceOrder}" class="sapUiResponsivePadding--header">
+            <ObjectHeader
+                title="{filteredConfirmation>/to_Item/0/ReferenceServiceOrder}"
+                class="sapUiResponsivePadding--header"
+            >
                 <attributes>
-                    <ObjectAttribute title="{i18n>startTime}" text="{ 
+                    <ObjectAttribute
+                        title="{i18n>startTime}"
+                        text="{ 
                         path: 'filteredConfirmation>/additionalData/RequestedServiceStartDateTime', 
                         type: 'sap.ui.model.type.DateTime', 
-                        formatOptions: { pattern: 'dd.MM.yyyy ' } }" />
-                    <ObjectAttribute title="{i18n>endTime}" text="{ 
+                        formatOptions: { pattern: 'dd.MM.yyyy ' } }"
+                    />
+                    <ObjectAttribute
+                        title="{i18n>endTime}"
+                        text="{ 
                         path: 'filteredConfirmation>/additionalData/PostingDate', 
                         type: 'sap.ui.model.type.DateTime', 
-                        formatOptions: { pattern: 'dd.MM.yyyy ' } }" />
-                    <ObjectAttribute title="{i18n>ContactPerson}" text="{filteredConfirmation>/additionalData/BusinessPartnerFullName_1}" />
-                    <ObjectAttribute title="{i18n>Sold-ToParty}" text="{filteredConfirmation>/additionalData/BusinessPartnerFullName}" />
-                    <ObjectAttribute title="{i18n>SalesOrganization}" text="{filteredConfirmation>/additionalData/SalesOrganization}" />
-                    <ObjectAttribute title="{i18n>employee}" text="{filteredConfirmation>/to_Item/0/ExecutingServiceEmployee}" />
+                        formatOptions: { pattern: 'dd.MM.yyyy ' } }"
+                    />
+                    <ObjectAttribute
+                        title="{i18n>ContactPerson}"
+                        text="{filteredConfirmation>/additionalData/BusinessPartnerFullName_1}"
+                    />
+                    <ObjectAttribute
+                        title="{i18n>Sold-ToParty}"
+                        text="{filteredConfirmation>/additionalData/BusinessPartnerFullName}"
+                    />
+                    <ObjectAttribute
+                        title="{i18n>SalesOrganization}"
+                        text="{filteredConfirmation>/additionalData/SalesOrganization}"
+                    />
+                    <ObjectAttribute
+                        title="{i18n>employee}"
+                        text="{viewModel>/ExecutingServiceEmployee}"
+                    />
                 </attributes>
             </ObjectHeader>
 
-            <SegmentedButton selectedKey="{viewModel>/selectedTab}" selectionChange="onTabChange" class="sapUiLargePadding sapUiLargeMargin">
+            <SegmentedButton
+                selectedKey="{viewModel>/selectedTab}"
+                selectionChange=".onTabChange"
+            >
                 <items>
-                    <SegmentedButtonItem key="orders" text="{i18n>orders}" />
-                    <SegmentedButtonItem key="confirmations" text="{i18n>confirmations}" />
+                    <SegmentedButtonItem
+                        key="orders" 
+                        text="{i18n>orders} ({serviceOrder>/itemsCount})" 
+                        class="sapUiLargePadding sapUiLargeMargin"
+                    />
+                    <SegmentedButtonItem
+                        key="confirmations" 
+                        text="{i18n>confirmations} ({filteredConfirmation>/itemsCount})" 
+                        class="sapUiLargePadding sapUiLargeMargin" 
+                    />
                 </items>
             </SegmentedButton>
 
             <!-- Orders Table (visible when 'orders' tab is selected) -->
-            <Table id="ordersTable"  items="{serviceOrder>/to_Item}" visible="{= ${viewModel>/selectedTab} === 'orders'}">
+            <Table
+                id="ordersTable"
+                items="{serviceOrder>/to_Item}"
+                visible="{= ${viewModel>/selectedTab} === 'orders'}"
+            >
                 <columns>
                     <Column width="2rem">
+                        <!-- Checkbox Column -->
+                    </Column>
+                    <Column width="3rem">
                         <Text text="{i18n>itemNumber}" />
                     </Column>
-                    <Column minScreenWidth="800px" width="6rem">
+                    <Column
+                        minScreenWidth="800px"
+                        width="6rem"
+                    >
                         <Text text="{i18n>product}" />
                     </Column>
                     <Column>
@@ -45,20 +94,34 @@
                     <Column width="125px">
                         <Text text="{i18n>quantity}" />
                     </Column>
-                    <Column minScreenWidth="330px" >
+                    <Column minScreenWidth="330px">
                         <Text text="{i18n>unit}" />
                     </Column>
                     <Column>
                         <Text text="{i18n>category}" />
                     </Column>
+                    <Column>
+                        <!-- Buttons -->
+                    </Column>
                 </columns>
                 <items>
-                    <ColumnListItem>
+                    <ColumnListItem
+                        press="onToggleOrderItemSelect"
+                        type="Active"
+                        selected="{serviceOrder>selected}"
+                    >
                         <cells>
-                            <Text text="{serviceOrder>ServiceOrderItem}"/>
-                            <Text text="{serviceOrder>Product}"/>
-                            <Text text="{serviceOrder>ServiceOrderItemDescription}"/>
-                            <StepInput 
+                            <CheckBox
+                                selected="{serviceOrder>selected}"
+                                enabled="{= ${serviceOrder>ServiceOrderItemIsReleased} === 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
+                                select=".onOrderItemSelectChange"
+                            />
+                            <Text text="{serviceOrder>ServiceOrderItem}" />
+                            <Text text="{serviceOrder>Product}" />
+                            <Text
+                                text="{serviceOrder>ServiceOrderItemDescription}"
+                            />
+                            <StepInput
                                 width="auto"
                                 value="{serviceOrder>Quantity}"
                                 textAlign="Center"
@@ -66,63 +129,136 @@
                                 min="0.00"
                                 max="10.00"
                                 step="0.25"
-						        largerStep="1"
+                                largerStep="1"
+                                enabled="{= ${serviceOrder>ServiceOrderItemIsReleased} === 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
+                                change=".onOrderItemStepInputChange"
                             />
-                            <Text text="{serviceOrder>QuantityUnit}"/>
-                            <Text text="{serviceOrder>ServiceOrderItemCategory}"/>
+                            <Text text="{serviceOrder>QuantityUnit}" />
+                            <Text
+                                text="{serviceOrder>ServiceOrderItemCategory}"
+                            />
+                            <Button 
+                                icon="sap-icon://locked"
+                                type="Accept"
+                                tooltip="Release"
+                                visible="{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
+                                press=".onReleaseOrderItemPress"
+                            />
                         </cells>
                     </ColumnListItem>
                 </items>
             </Table>
-          
+
             <!-- Confirmations Table (visible when 'confirmations' tab is selected) -->
-            <Table id="confirmationsTable" items="{filteredConfirmation>/to_Item}" visible="{= ${viewModel>/selectedTab} === 'confirmations'}">
+            <Table
+                id="confirmationsTable"
+                items="{filteredConfirmation>/to_Item}"
+                visible="{= ${viewModel>/selectedTab} === 'confirmations'}"
+            >
                 <columns>
+                    <Column width="2rem">
+                        <!-- Checkbox Column -->
+                    </Column>
                     <Column>
                         <Text text="{i18n>ServiceConfirmation}" />
                     </Column>
-                    <Column>
+                    <Column width="2rem">
                         <Text text="{i18n>item}" />
                     </Column>
-                    <Column>
+                    <Column
+                        minScreenWidth="800px"
+                        width="6rem"
+                    >
                         <Text text="{i18n>product}" />
                     </Column>
                     <Column>
                         <Text text="{i18n>description}" />
                     </Column>
-                    <Column>
+                    <Column width="125px">
                         <Text text="{i18n>quantity}" />
                     </Column>
-                    <Column>
+                    <Column minScreenWidth="330px">
                         <Text text="{i18n>unit}" />
+                    </Column>
+                    <Column width="5rem">
+                        <Text text="{i18n>status}" />
                     </Column>
                 </columns>
                 <items>
-                    <ColumnListItem>
+                    <ColumnListItem
+                        press=".onToggleConfirmationItemSelect"
+                        type="Active"
+                        selected="{filteredConfirmation>selected}"
+                    >
                         <cells>
-                            <Text text="{filteredConfirmation>ServiceConfirmation}" />
-                            <Text text="{filteredConfirmation>ServiceConfirmationItem}" />
+                            <CheckBox
+                                selected="{filteredConfirmation>selected}"
+                                enabled="{= ${filteredConfirmation>ServiceConfItemIsCompleted} !== 'X' }"
+                                select=".onConfirmationItemSelectChange"
+                            />
+                            <Text
+                                text="{filteredConfirmation>ServiceConfirmation}"
+                            />
+                            <Text
+                                text="{filteredConfirmation>ServiceConfirmationItem}"
+                            />
                             <Text text="{filteredConfirmation>Product}" />
-                            <Text text="{filteredConfirmation>ServiceConfItemDescription}" />
-                            <Input value="{filteredConfirmation>Quantity}" type="Number" />
+                            <Text
+                                text="{filteredConfirmation>ServiceConfItemDescription}"
+                            />
+                            <StepInput
+                                width="auto"
+                                value="{filteredConfirmation>Quantity}"
+                                textAlign="Center"
+                                displayValuePrecision="2"
+                                min="0.00"
+                                max="10.00"
+                                step="0.25"
+                                largerStep="1"
+                                enabled="{= ${filteredConfirmation>ServiceConfItemIsCompleted} !== 'X' }"
+                                change=".onConfirmationItemStepInputChange"
+                            />
                             <Text text="{filteredConfirmation>QuantityUnit}" />
+                            <core:Icon
+                                class="sapUiSmallMarginEnd"
+                                size="1rem"
+                                src="{= ${filteredConfirmation>ServiceConfItemIsCompleted} === 'X' ? 'sap-icon://accept' : 'sap-icon://unlocked' }"
+                                color="{= ${filteredConfirmation>ServiceConfItemIsCompleted} === 'X' ? 'Neutral' : 'Positive' }"
+                                tooltip="{= ${filteredConfirmation>ServiceConfItemIsCompleted} === 'X' ? 'Completed' : 'Open' }"
+                            />
                         </cells>
                     </ColumnListItem>
                 </items>
             </Table>
-            
+
             <HBox
                 justifyContent="End"
                 class="sapUiSmallMarginTop"
                 visible="{= ${viewModel>/selectedTab} === 'orders'}"
             >
                 <Button
-                    text="{i18n>confirm}"
-                    press=".onConfirmButtonPress"
+                    text="{i18n>createServiceConfirmation}"
+                    press=".onCreateServiceConfirmationButtonPress"
                     type="Emphasized"
-                visible="{= ${filteredConfirmation>/to_Item/0/} }"
+                    visible="{= ${serviceOrder>/hasItems}}"
                 />
             </HBox>
+
+            <HBox
+                justifyContent="End"
+                class="sapUiSmallMarginTop"
+                visible="{= ${viewModel>/selectedTab} === 'confirmations'}"
+            >
+                <Button
+                    text="{i18n>confirmServiceItems}"
+                    press=".onConfirmServiceItemsButtonPress"
+                    type="Emphasized"
+                    enabled="{= ${filteredConfirmation>/hasSelectedItems}}"
+                    visible="{= ${filteredConfirmation>/hasItems}}"
+                />
+            </HBox>
+
+
         </content>
     </Page>
 </mvc:View>
