@@ -1,0 +1,198 @@
+<mvc:View
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:plugins="sap.m.plugins"
+    xmlns:columnmenu="sap.m.table.columnmenu"
+    xmlns:sap.ui.fl="sap.ui.fl"
+    xmlns:sap.ui.dt="sap.ui.dt"
+    xmlns:vm="sap.ui.fl.variants"
+    xmlns:dnd="sap.ui.core.dnd"
+    xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
+    controllerName="pho.com.serviceoverview.controller.Main"
+>
+    <Page
+        id="page" 
+        showHeader="false"
+        title="{i18n>title}"
+        class=" sapUiResponsivePadding--header sapUiResponsivePadding--content"
+    >  
+        <content>
+            <Table
+                id="idServiceTable"
+                inset="false"
+                enableBusyIndicator="true"
+                items="{path: '/items'}"
+                ariaLabelledBy="title" 
+                fixedLayout="Strict"
+                autoPopinMode="true" 
+                growing="true" 
+                sticky="ColumnHeaders,HeaderToolbar" 
+                popinLayout="GridSmall"
+            >
+                <headerToolbar>
+                    <OverflowToolbar>
+                        <Title id="title" text="{i18n>serviceConfirmations}"/>
+                        <ToolbarSeparator/>
+                        <vm:VariantManagement id="p13nVm" for="idServiceTable"/>
+                        <ToolbarSpacer/>
+                        <Button icon="sap-icon://action-settings" press="openConfDialog" tooltip="Settings"/>
+                    </OverflowToolbar>
+                </headerToolbar>
+                <infoToolbar>
+                    <OverflowToolbar id="filterInfo" visible="false" design="Info" active="true" press="onFilterInfoPress">
+                        <Text id="filterInfoText" wrapping="false" text="Table filter active" />
+                        <ToolbarSpacer />
+                        <Button icon="sap-icon://decline" press="onClearFilterPress" type="Transparent" tooltip="Remove All Filters" />
+                    </OverflowToolbar>
+                </infoToolbar>
+
+                <dependents>
+                    <plugins:ColumnResizer columnResize="onColumnResize"/>
+                    <columnmenu:Menu id="menu" beforeOpen="beforeOpenColumnMenu" app:showTableSettingsButton="true" app:tableSettingsPressed="openConfDialog">
+                        <columnmenu:QuickSort change="onSort">
+                            <columnmenu:items>
+                                <columnmenu:QuickSortItem></columnmenu:QuickSortItem>
+                            </columnmenu:items>
+                        </columnmenu:QuickSort>
+                        <columnmenu:QuickGroup change="onGroup">
+                            <columnmenu:items>
+                                <columnmenu:QuickGroupItem></columnmenu:QuickGroupItem>
+                            </columnmenu:items>
+                        </columnmenu:QuickGroup>
+                    </columnmenu:Menu>
+                </dependents>
+
+                <dragDropConfig>
+                    <dnd:DragDropInfo sourceAggregation="columns" targetAggregation="columns" dropPosition="Between" drop="onColumnMove"/>
+                </dragDropConfig>
+                
+                <noData>
+                    <IllustratedMessage/>
+                </noData>
+                
+                <columns>
+                    <Column 
+                        headerMenu="menu"
+                        app:p13nKey="ServiceOrderDescription_col"
+                    >
+                        <header>
+                            <Text text="{i18n>serviceOrder}" />
+                        </header>
+                    </Column>
+                    <Column 
+                        minScreenWidth="Desktop" 
+                        headerMenu="menu"
+                        app:p13nKey="ServiceOrder_col" 
+                        hAlign="End" 
+                        visible="true"
+                    >
+                        <Text text="{i18n>serviceOrderID}" />
+                    </Column>
+                    <Column
+                        minScreenWidth="Small"
+                        demandPopin="true"
+                        headerMenu="menu"
+                        app:p13nKey="RequestedServiceStartDateTime_col"
+                        app:columnType="DateTime"
+                    >
+                       <Text text="{i18n>requestedServiceStartDateTime}" />
+                    </Column>
+                    <Column
+                        minScreenWidth="Small"
+                        demandPopin="true"
+                        headerMenu="menu"
+                        app:p13nKey="RequestedServiceEndDateTime_col"
+                        app:columnType="DateTime"
+                    >
+                        <Text text="{i18n>requestedServiceEndDateTime}" />
+                    </Column>
+                    <Column
+                        minScreenWidth="Small"
+                        demandPopin="true"
+                        headerMenu="menu"
+                        app:p13nKey="ServiceOrderStatusName_col"
+                    >
+                        <Text text="{i18n>serviceDocumentStatus}" />
+                    </Column>
+                    <Column
+                        minScreenWidth="Small"
+                        demandPopin="true"
+                        headerMenu="menu"
+                        app:p13nKey="ServiceDocumentPriority_col"
+                    >
+                        <Text text="{i18n>serviceDocumentPriority}" />
+                    </Column>
+                </columns>
+                
+                
+                <items>
+                    <ColumnListItem
+                        vAlign="Middle"
+                        type="Active"
+                        press="onServiceOrderPress"
+                    >
+                        <cells>
+                            <Text
+                                text="{ServiceOrderDescription}"
+                                tooltip="{ServiceOrder}"
+                            />
+                            <Text text="{ServiceOrder}" />
+                            <Text
+                                text="{ 
+                                        path: 'RequestedServiceStartDateTime',
+                                        type: 'sap.ui.model.type.DateTime',
+                                        formatOptions: { pattern: 'dd.MM.yyyy' }
+                                    }"
+                            />
+                            <Text
+                                text="{ 
+                                        path: 'RequestedServiceEndDateTime',
+                                        type: 'sap.ui.model.type.DateTime',
+                                        formatOptions: { pattern: 'dd.MM.yyyy' }
+                                    }"
+                                class="sapUiSmallMarginEnd"
+                            />
+                            <VBox
+                                alignItems="Center"
+                            >
+                                <HBox 
+                                    class="customTableCellContent"
+                                    width="70%"
+                                    alignItems="Start"
+                                >
+                                    <core:Icon
+                                        id="statusIcon"                                        
+                                        class="sapUiMediumMarginEnd"
+                                        src="{= ${ServiceOrderStatusName} === 'Completed' || ${ServiceOrderStatusName} === 'Erledigt' ? 'sap-icon://message-success' : 
+                                                ${ServiceOrderStatusName} === 'In Process' || ${ServiceOrderStatusName} === 'In Bearbeitung' ? 'sap-icon://busy' : 
+                                                ${ServiceOrderStatusName} === 'Released' || ${ServiceOrderStatusName} === 'Freigegeben' ? 'sap-icon://customer-financial-fact-sheet' : 
+                                                ${ServiceOrderStatusName} === 'Open' || ${ServiceOrderStatusName} === 'Offen' ? 'sap-icon://open-folder' : 
+                                                'sap-icon://alert' }"
+                                        color="{= ${ServiceOrderStatusName} === 'Completed' || ${ServiceOrderStatusName} === 'Erledigt'  ? '#107e3e' : 
+                                                  ${ServiceOrderStatusName} === 'Released' || ${ServiceOrderStatusName} === 'In Bearbeitung'  ? '#107e3e' : 
+                                                  ${ServiceOrderStatusName} === 'In Process' || ${ServiceOrderStatusName} === 'Freigegeben'  ? '#107e3e' : 
+                                                  ${ServiceOrderStatusName} === 'Open' || ${ServiceOrderStatusName} === 'Offen'  ? '#107e3e' : 
+                                                  '#666666' }"
+                                        tooltip="{ServiceOrderStatusName}"
+                                    />
+                                    <Text
+                                        text="{ServiceOrderStatusName}"
+                                        class="sapUiMediumMarginStart"
+                                    />
+                                </HBox>
+                            </VBox>
+                            <Text
+                                text="{
+                                        path: 'ServiceDocumentPriority',
+                                        formatter: '.formatter.priorityText'
+                                    }"
+                            />
+                            <!-- <Text text="{BusinessPartnerName}" /> -->
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

@@ -107,7 +107,8 @@ sap.ui.define([
                 aServiceOrderItemsToConfirm.push({
                     ReferenceServiceOrder: oOrderItem.ServiceOrder,
                     ReferenceServiceOrderItem: oOrderItem.ServiceOrderItem,
-                    Quantity: String(oOrderItem.Quantity)
+                    ExecutingServiceEmployee: '9980000012', // ToDo: delete this line and check earlier if employee is set
+                    // Quantity: String(oOrderItem.Quantity)
                 });
             });
 
@@ -268,6 +269,10 @@ sap.ui.define([
                 });
             });
 
+        },
+        
+        _finalizeServiceConfirmation: function () {
+            
         },
 
 
@@ -526,7 +531,7 @@ sap.ui.define([
                 
                 const sPath = `/A_ServiceConfirmationItem(ServiceConfirmation='${sServiceConfirmation}',ServiceConfirmationItem='${sServiceConfirmationItem}')`;
                 const oPayload = {
-                    ExecutingServiceEmployee: "9980000003", // ToDo: delete this line and check earlier if employee is set
+                    ExecutingServiceEmployee: "9980000012", // ToDo: delete this line and check earlier if employee is set
                     Quantity: newQuantity.toFixed(3), // Format to 3 decimal places as string
                 };
 
@@ -589,6 +594,7 @@ sap.ui.define([
 
                     // Read and set employee name
                     if (oViewModel.getProperty("/ExecutingServiceEmployee") === this._i18n().getText("noEmployeeAssigned")) {
+                        
                         const sEmployeeId = aProcessedItems.find(item => item.ExecutingServiceEmployee && item.ExecutingServiceEmployee !== "")?.ExecutingServiceEmployee;
                         this._getBusinessPartnerName(sEmployeeId).then((name) => oViewModel.setProperty("/ExecutingServiceEmployee", name));
                     }
@@ -640,9 +646,11 @@ sap.ui.define([
             oDataModel.read("/A_ServiceConfirmationItem", {
                 urlParameters: {
                     "$select": "ReferenceServiceOrder,ServiceConfirmation,ServiceConfirmationItem,Product,ServiceConfItemDescription,Quantity,QuantityUnit,ExecutingServiceEmployee,ActualServiceStartDateTime,ActualServiceEndDateTime,ServiceConfItemIsCompleted",
-                    "$filter": `(ReferenceServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
+                    // "$filter": `(ReferenceServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01')`
+                    "$filter": `(ReferenceServiceOrder eq '${sOrderId}') and (Product eq 'SRV_01') and (ExecutingServiceEmployee eq '9980000012')`
                 },
                 success: (oData) => {
+                    console.info(oData?.results);
                     if (oData?.results?.length) {
                         const aItems = oData.results.map((item) => {
                             return {

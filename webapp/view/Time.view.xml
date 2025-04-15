@@ -14,7 +14,7 @@
     >
         <content>
             <ObjectHeader
-                title="{filteredConfirmation>/to_Item/0/ReferenceServiceOrder}"
+                title="{filteredConfirmation>/additionalData/ServiceOrder}"
                 class="sapUiResponsivePadding--header"
             >
                 <attributes>
@@ -121,17 +121,11 @@
                             <Text
                                 text="{serviceOrder>ServiceOrderItemDescription}"
                             />
-                            <StepInput
+                            <Input 
                                 width="auto"
                                 value="{serviceOrder>Quantity}"
                                 textAlign="Center"
-                                displayValuePrecision="2"
-                                min="0.00"
-                                max="10.00"
-                                step="0.25"
-                                largerStep="1"
-                                enabled="{= ${serviceOrder>ServiceOrderItemIsReleased} === 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
-                                change=".onOrderItemStepInputChange"
+                                enabled="false"
                             />
                             <Text text="{serviceOrder>QuantityUnit}" />
                             <Text
@@ -142,13 +136,16 @@
                                 type="Accept"
                                 tooltip="Release"
                                 visible="{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
-                                press=".onReleaseOrderItemPress"
                             />
                         </cells>
                     </ColumnListItem>
                 </items>
             </Table>
 
+            
+            
+            
+            
             <!-- Confirmations Table (visible when 'confirmations' tab is selected) -->
             <Table
                 id="confirmationsTable"
@@ -213,7 +210,7 @@
                                 displayValuePrecision="2"
                                 min="0.00"
                                 max="10.00"
-                                step="0.25"
+                                step="1.00"
                                 largerStep="1"
                                 enabled="{= ${filteredConfirmation>ServiceConfItemIsCompleted} !== 'X' }"
                                 change=".onConfirmationItemStepInputChange"
