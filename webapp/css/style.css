@@ -19,12 +19,12 @@ table {
 }
 
 
-@media (min-width: 479px) and (max-width: 600px) {
+@media (min-width: 479px) and (max-width: 599px) {
     .hideStatusText {
         display: none !important;
     }
 }
-@media (max-width: 600px) {
+@media (max-width: 599px) {
     .hideUnder600 {
         display: none !important;
     }

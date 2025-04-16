@@ -100,8 +100,8 @@
                     <Column>
                         <Text text="{i18n>category}" />
                     </Column>
-                    <Column>
-                        <!-- Buttons -->
+                    <Column width="4rem">
+                        <!-- Icons -->
                     </Column>
                 </columns>
                 <items>
@@ -131,12 +131,26 @@
                             <Text
                                 text="{serviceOrder>ServiceOrderItemCategory}"
                             />
-                            <Button 
+                            
+                            
+                            <!-- <Button 
                                 icon="sap-icon://locked"
                                 type="Accept"
                                 tooltip="Release"
                                 visible="{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? true : false) : false}"
-                            />
+                            /> -->
+                            
+                            <core:Icon
+                                src="sap-icon://{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? 'complete' : 'locked') : 'activities'}"
+                                class="orderCompletedIcon"
+                                color="{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? 'Positive' : 'Neutral') : 'Primary' }"
+                                size="1.4rem" 
+                                tooltip="{= ${serviceOrder>ServiceOrderItemIsReleased} !== 'X' ? (${serviceOrder>ServiceOrderItemIsCompleted} !== 'X' ? ${i18n>completed} : ${i18n>needRelease}) : ${i18n>released}}"
+                            >
+                                <core:layoutData>
+                                    <FlexItemData growFactor="1" />
+                                </core:layoutData>
+                            </core:Icon>
                         </cells>
                     </ColumnListItem>
                 </items>

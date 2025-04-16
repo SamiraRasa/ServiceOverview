@@ -271,10 +271,6 @@ sap.ui.define([
 
         },
         
-        _finalizeServiceConfirmation: function () {
-            
-        },
-
 
         /******************************************************
          * Private Methoden
